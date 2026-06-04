@@ -17,7 +17,9 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Launch the interface
+## Launch the app
+
+Run the small Streamlit interface with:
 
 ```powershell
 python -m streamlit run python_visual_odometry\app.py
@@ -40,5 +42,5 @@ launch_visual_odometry_app.bat
 ## Notes
 
 - The first run may download the `LiheYoung/depth_anything_vitb14` model.
-- Extracted frames are saved in `*_frames_spaced` folders or in the output folder chosen by the notebook/app.
+- Extracted frames are saved in `*_frames_spaced` folders or in the output folder chosen by the notebook or app.
 - Depth cache files are stored in `python_visual_odometry/depth_anything_cache/vitb`.
