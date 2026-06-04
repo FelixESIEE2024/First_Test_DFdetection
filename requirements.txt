@@ -1,0 +1,37 @@
+# Shared / core dependencies used across the repo
+numpy
+opencv-python
+Pillow
+matplotlib
+future
+
+# Shared deep learning dependencies
+# Used by: Depth-Anything + python_visual_odometry
+torch
+torchvision
+huggingface_hub
+
+# Visual odometry app / notebooks
+# Used by: python_visual_odometry
+streamlit
+
+# Depth-Anything demo UI
+# Used by: Depth-Anything
+gradio==4.14.0
+gradio_imageslider
+
+# Depth-Anything utilities / metric-depth scripts
+# Used by: Depth-Anything
+tqdm
+open3d
+omegaconf
+torchmetrics==0.10.3
+fvcore
+iopath
+submitit
+h5py
+
+# Optional / platform-specific extras for some bundled Depth-Anything / DINOv2 tools
+# Used by: Depth-Anything
+# xformers==0.0.18
+# cuml-cu11

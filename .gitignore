@@ -1,0 +1,23 @@
+# Local Python environments
+.venv/
+venv/
+env/
+ENV/
+
+# Editor / notebook noise
+.vscode/
+.ipynb_checkpoints/
+
+# Project datasets
+dataset/
+python_visual_odometry/dataset/
+
+# Generated analysis outputs
+python_visual_odometry/scaling_outputs/
+python_visual_odometry/*_frames_spaced/
+python_visual_odometry/depth_anything_cache/
+python_visual_odometry/test/
+
+# Python cache
+__pycache__/
+*.py[cod]
