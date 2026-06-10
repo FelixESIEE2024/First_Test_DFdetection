@@ -201,16 +201,21 @@ nb.cells = [
         En pratique :
         - `setImage(...)` construit la pyramide de l'image
         - `setInvDepth(...)` redimensionne aussi l'inverse depth sur chaque niveau
+
+        Ici, les intrinseques ne sont plus estimes automatiquement :
+        tu renseignes directement `fx`, `fy`, `cx`, `cy` a partir de ton ground truth camera.
         """
     ),
     code(
         """
-        width = 640
-        height = 480
-        fx = 481.20
-        fy = 480.0
+        height, width = keyframe_image.shape
+
+        # Ground truth camera intrinsics used everywhere in this project.
+        fx = 525.0
+        fy = 525.0
         cx = 319.5
         cy = 239.5
+        factor = 5000
 
         cam = camera.camera(fx, fy, cx, cy, width, height)
 

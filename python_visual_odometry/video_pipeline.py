@@ -42,11 +42,11 @@ DEPTH_CACHE_DIR = MODULE_DIR / "depth_anything_cache" / DEPTH_ENCODER
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEPTH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-BASELINE_WIDTH = 640.0
-BASELINE_HEIGHT = 480.0
-BASELINE_FX = 481.20
-BASELINE_FY = 480.0
-
+CAMERA_FX = 525.0
+CAMERA_FY = 525.0
+CAMERA_CX = 319.5
+CAMERA_CY = 239.5
+DEPTH_SCALE_FACTOR = 5000
 
 @dataclass
 class FrameExtractionResult:
@@ -160,13 +160,21 @@ def depth_to_inverse_depth(depth: np.ndarray) -> tuple[np.ndarray, np.ndarray, n
     return inv_depth, inv_depth_var, valid_mask
 
 
-def estimate_intrinsics(image_width: int, image_height: int) -> dict[str, float]:
-    scale_x = image_width / BASELINE_WIDTH
-    scale_y = image_height / BASELINE_HEIGHT
-    fx = BASELINE_FX * scale_x
-    fy = BASELINE_FY * scale_y
-    cx = (image_width - 1) / 2.0
-    cy = (image_height - 1) / 2.0
+def build_intrinsics(
+    image_width: int,
+    image_height: int,
+) -> dict[str, float]:
+    fx = CAMERA_FX
+    fy = CAMERA_FY
+    cx = CAMERA_CX
+    cy = CAMERA_CY
+    if fx <= 0.0 or fy <= 0.0:
+        raise ValueError("Les distances focales fx et fy doivent etre strictement positives.")
+    if not (0.0 <= cx < image_width) or not (0.0 <= cy < image_height):
+        raise ValueError(
+            "Le centre principal doit etre dans l'image: "
+            f"cx in [0, {image_width}), cy in [0, {image_height})."
+        )
     return {
         "fx": float(fx),
         "fy": float(fy),
@@ -384,7 +392,10 @@ def run_video_pipeline(
     keyframe_depth = infer_depth_map(keyframe_path, use_cache=use_cache, save_cache=save_cache)
     keyframe_inv_depth, keyframe_inv_depth_var, depth_valid_mask = depth_to_inverse_depth(keyframe_depth)
 
-    intrinsics = estimate_intrinsics(keyframe_image.shape[1], keyframe_image.shape[0])
+    intrinsics = build_intrinsics(
+        image_width=keyframe_image.shape[1],
+        image_height=keyframe_image.shape[0],
+    )
     cam = camera.camera(
         intrinsics["fx"],
         intrinsics["fy"],

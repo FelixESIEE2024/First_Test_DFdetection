@@ -4,12 +4,20 @@ import json
 
 import streamlit as st
 
-from video_pipeline import DEVICE, DEPTH_MODEL_NAME, run_video_pipeline
+import video_pipeline as vp
+
+CAMERA_FX = getattr(vp, "CAMERA_FX", 525.0)
+CAMERA_FY = getattr(vp, "CAMERA_FY", 525.0)
+CAMERA_CX = getattr(vp, "CAMERA_CX", 319.5)
+CAMERA_CY = getattr(vp, "CAMERA_CY", 239.5)
+DEPTH_SCALE_FACTOR = getattr(vp, "DEPTH_SCALE_FACTOR", 5000)
+DEPTH_MODEL_NAME = getattr(vp, "DEPTH_MODEL_NAME", "LiheYoung/depth_anything_vitb14")
+DEVICE = getattr(vp, "DEVICE", "cpu")
 
 
 st.set_page_config(
     page_title="Video Depth Pose Pipeline",
-    page_icon="ðŸŽžï¸",
+    page_icon=":movie_camera:",
     layout="wide",
 )
 
@@ -75,6 +83,31 @@ st.markdown(
         border-radius: 18px;
         padding: 14px 16px;
     }
+    .highlight-metric {
+        background: linear-gradient(135deg, #163534, #224847);
+        border-radius: 24px;
+        padding: 22px 26px;
+        margin: 0.5rem 0 1.2rem 0;
+        box-shadow: 0 18px 48px rgba(22, 53, 52, 0.20);
+    }
+    .highlight-metric-label {
+        color: rgba(255, 255, 255, 0.82) !important;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    .highlight-metric-value {
+        color: #ffffff !important;
+        font-size: 3.2rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-top: 0.35rem;
+    }
+    .highlight-metric-subtext {
+        color: rgba(255, 255, 255, 0.85) !important;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
     code {
         background: rgba(32, 91, 90, 0.08) !important;
         color: #1f2933 !important;
@@ -97,7 +130,7 @@ st.markdown(
 st.markdown(
     """
     <div class="hero-card">
-      <h1>Video â†’ depth â†’ pose â†’ error map pipeline</h1>
+      <h1>Video -> depth -> pose -> error map pipeline</h1>
       <p>
         This interface follows the logic of <code>New_version_nb.ipynb</code>:
         you only provide a video path, the app extracts frames, computes the keyframe depth
@@ -115,6 +148,12 @@ with st.sidebar:
     output_dir = st.text_input(
         "Frame output directory (optional)",
         placeholder="Leave empty to use <video>_frames_spaced",
+    )
+
+    st.header("Camera intrinsics")
+    st.caption(
+        f"Fixed ground truth: fx={CAMERA_FX}, fy={CAMERA_FY}, "
+        f"cx={CAMERA_CX}, cy={CAMERA_CY}, depth factor={DEPTH_SCALE_FACTOR}"
     )
 
     st.header("Options")
@@ -144,6 +183,20 @@ def render_results(result: dict) -> None:
     metrics = result["metrics"]
     intrinsics = result["intrinsics"]
     total_pixels = intrinsics["width"] * intrinsics["height"]
+    valid_pixel_ratio_percent = 100.0 * metrics["valid_reprojected_pixels"] / total_pixels
+
+    st.markdown(
+        f"""
+        <div class="highlight-metric">
+          <div class="highlight-metric-label">Valid Reprojected Pixels</div>
+          <div class="highlight-metric-value">{valid_pixel_ratio_percent:.2f}%</div>
+          <div class="highlight-metric-subtext">
+            {metrics["valid_reprojected_pixels"]} / {total_pixels} pixels
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     a, b, c, d = st.columns(4)
     a.metric("Photometric MSE", f"{metrics['mean_squared_error']:.6f}")
@@ -156,11 +209,12 @@ def render_results(result: dict) -> None:
         f"""
         - Video: `{result["video_path"]}`
         - Exported frames: `{len(result["frame_paths"])}` in `{result["frames_dir"]}`
-        - Keyframe / target: `scene_000` â†’ `scene_{result["target_index"]:03d}`
+        - Keyframe / target: `scene_000` -> `scene_{result["target_index"]:03d}`
         - Selected video indices: `{result["selected_video_indices"]}`
         - Detected FPS: `{result["fps"]:.3f}`
         - Depth model: `{DEPTH_MODEL_NAME}` on `{DEVICE}`
-        - Estimated intrinsics: `fx={intrinsics["fx"]:.2f}`, `fy={intrinsics["fy"]:.2f}`, `cx={intrinsics["cx"]:.2f}`, `cy={intrinsics["cy"]:.2f}`
+        - Fixed ground-truth intrinsics: `fx={intrinsics["fx"]:.2f}`, `fy={intrinsics["fy"]:.2f}`, `cx={intrinsics["cx"]:.2f}`, `cy={intrinsics["cy"]:.2f}`
+        - Depth scale factor reference: `{DEPTH_SCALE_FACTOR}`
         - Valid reprojected pixels: `{metrics["valid_reprojected_pixels"]} / {total_pixels}`
         """
     )
@@ -208,7 +262,7 @@ if run_clicked:
     else:
         try:
             with st.spinner("Extracting frames, estimating depth, and computing pose..."):
-                result = run_video_pipeline(
+                result = vp.run_video_pipeline(
                     video_path=video_path.strip(),
                     output_dir=output_dir.strip() or None,
                     frame_count=frame_count,

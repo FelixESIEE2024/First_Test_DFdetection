@@ -63,10 +63,11 @@ def main():
 
   width = 640
   height = 480
-  fx = 481.20
-  fy = 480.0
+  fx = 525.0
+  fy = 525.0
   cx = 319.5
   cy = 239.5
+  factor = 5000
 
   frame = frameData.frameData()
   cam = camera.camera(fx,fy,cx,cy,width,height)
