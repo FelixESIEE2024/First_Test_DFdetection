@@ -530,6 +530,26 @@ nb.cells = [
         print("  max squared difference   =", float(np.nanmax(squared_diff_map)))
         """
     ),
+    code(
+        """
+        valid_abs_diff = abs_diff_map[valid_mask]
+
+        total_valid_pixels = int(valid_abs_diff.size)
+        diff_gt_200 = int(np.sum(valid_abs_diff > 200))
+        diff_150_200 = int(np.sum((valid_abs_diff >= 150) & (valid_abs_diff <= 200)))
+        diff_100_150 = int(np.sum((valid_abs_diff >= 100) & (valid_abs_diff < 150)))
+        diff_50_100 = int(np.sum((valid_abs_diff >= 50) & (valid_abs_diff < 100)))
+        diff_0_50 = int(np.sum((valid_abs_diff >= 0) & (valid_abs_diff < 50)))
+
+        print("Pixel count by absolute difference range:")
+        print("  total valid pixels       =", total_valid_pixels)
+        print("  difference > 200         =", diff_gt_200)
+        print("  150 <= difference <= 200 =", diff_150_200)
+        print("  100 <= difference < 150  =", diff_100_150)
+        print("   50 <= difference < 100  =", diff_50_100)
+        print("    0 <= difference < 50   =", diff_0_50)
+        """
+    ),
     md(
         """
         ## 11. Que faire de l'erreur apres optimisation ?
