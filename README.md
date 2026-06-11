@@ -21,30 +21,36 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Launch the app
+## Streamlit archive
 
-Run the small Streamlit interface with:
+The old Streamlit interface is archived for later reuse in:
 
 ```powershell
-python -m streamlit run python_visual_odometry\app.py
+archives\streamlit
 ```
 
-You can also use:
+Archived launch options:
 
 ```powershell
-launch_visual_odometry_app.bat
+python -m streamlit run archives\streamlit\app.py
+```
+
+or:
+
+```powershell
+archives\streamlit\launch_visual_odometry_app.bat
 ```
 
 ## Notebooks
 
-- `python_visual_odometry/Detection_DF.ipynb`  
+- `notbook/Detection_DF.ipynb`  
   Test the pipeline on a single video or a single pair of frames.
 
-- `python_visual_odometry/Detection_DF_scaling.ipynb`  
-  Run the same idea on a larger part of the dataset and export aggregated statistics.
+- `notbook/opencv_test.ipynb`  
+  Small ORB + essential-matrix pose-estimation notebook.
 
 ## Notes
 
 - The first run may download the `LiheYoung/depth_anything_vitb14` model.
 - Extracted frames are saved in `*_frames_spaced` folders or in the output folder chosen by the notebook or app.
-- Depth cache files are stored in `python_visual_odometry/depth_anything_cache/vitb`.
+- Depth cache files for the archived Streamlit app are stored in `archives/streamlit/depth_anything_cache/vitb`.

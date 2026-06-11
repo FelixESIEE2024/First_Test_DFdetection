@@ -17,7 +17,7 @@ from torchvision.transforms import Compose
 
 
 MODULE_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = MODULE_DIR.parent
+PROJECT_ROOT = MODULE_DIR.parent.parent
 DEPTH_ANYTHING_DIR = PROJECT_ROOT / "Depth-Anything"
 LIEGROUPS_DIR = PROJECT_ROOT / "liegroups"
 
@@ -47,6 +47,7 @@ CAMERA_FY = 525.0
 CAMERA_CX = 319.5
 CAMERA_CY = 239.5
 DEPTH_SCALE_FACTOR = 5000
+
 
 @dataclass
 class FrameExtractionResult:
@@ -163,11 +164,11 @@ def depth_to_inverse_depth(depth: np.ndarray) -> tuple[np.ndarray, np.ndarray, n
 def build_intrinsics(
     image_width: int,
     image_height: int,
+    fx: float = CAMERA_FX,
+    fy: float = CAMERA_FY,
+    cx: float = CAMERA_CX,
+    cy: float = CAMERA_CY,
 ) -> dict[str, float]:
-    fx = CAMERA_FX
-    fy = CAMERA_FY
-    cx = CAMERA_CX
-    cy = CAMERA_CY
     if fx <= 0.0 or fy <= 0.0:
         raise ValueError("Les distances focales fx et fy doivent etre strictement positives.")
     if not (0.0 <= cx < image_width) or not (0.0 <= cy < image_height):
@@ -367,6 +368,10 @@ def run_video_pipeline(
     resize_width: int | None = None,
     use_cache: bool = True,
     save_cache: bool = True,
+    camera_fx: float = CAMERA_FX,
+    camera_fy: float = CAMERA_FY,
+    camera_cx: float = CAMERA_CX,
+    camera_cy: float = CAMERA_CY,
 ) -> dict[str, Any]:
     if target_frame_index <= 0:
         raise ValueError("La frame cible doit etre > 0 pour comparer au keyframe.")
@@ -395,6 +400,10 @@ def run_video_pipeline(
     intrinsics = build_intrinsics(
         image_width=keyframe_image.shape[1],
         image_height=keyframe_image.shape[0],
+        fx=camera_fx,
+        fy=camera_fy,
+        cx=camera_cx,
+        cy=camera_cy,
     )
     cam = camera.camera(
         intrinsics["fx"],

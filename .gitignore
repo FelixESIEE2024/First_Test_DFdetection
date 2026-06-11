@@ -5,19 +5,11 @@
 .vscode/
 dataset/
 
-assets/
 
 
-
-
-python_visual_odometry/depth_anything_cache
-
-python_visual_odometry/scaling_outputs
-python_visual_odometry/video_eval_reports
-python_visual_odometry/
-python_visual_odometry/
-python_visual_odometry/
-
+scripts/python_visual_odometry/depth_anything_cache
+scripts/python_visual_odometry/video_eval_reports
+scripts/python_visual_odometry/scaling_outputs
 
 # Python cache
 __pycache__/

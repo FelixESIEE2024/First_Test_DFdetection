@@ -4,8 +4,11 @@ import textwrap
 import nbformat as nbf
 
 
-ROOT = Path(__file__).resolve().parent
-NOTEBOOK_PATH = ROOT / "visual_odometry_pipeline_walkthrough.ipynb"
+MODULE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = MODULE_DIR.parent.parent
+NOTEBOOK_DIR = PROJECT_ROOT / "notbook"
+NOTEBOOK_PATH = NOTEBOOK_DIR / "visual_odometry_pipeline_walkthrough.ipynb"
+NOTEBOOK_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def md(text):
@@ -60,21 +63,31 @@ nb.cells = [
         - `dataset/desktop_dataset/images` : les images
         - `dataset/desktop_dataset/depth` : les depth maps `.npy`
 
-        Dans ce notebook, on travaille volontairement sur **un exemple simple** :
-        - `scene_000` = keyframe
-        - `scene_001` = image courante par defaut
-
-        Tu pourras changer la variable `TARGET_INDEX` plus bas si tu veux tester un autre cas.
+        Dans ce notebook, tout ce que tu voudras changer sera regroupe dans une seule cellule
+        de parametres juste en dessous :
+        - dossier dataset
+        - index du keyframe
+        - index de l'image courante
+        - intrinseques camera `fx`, `fy`, `cx`, `cy`
+        - activation ou non des fenetres debug du solveur
         """
     ),
     code(
         """
         from pathlib import Path
-        import copy
+        import sys
 
         import cv2
         import matplotlib.pyplot as plt
         import numpy as np
+
+        ROOT = Path.cwd()
+        if not (ROOT / "scripts" / "python_visual_odometry").exists() and (ROOT.parent / "scripts" / "python_visual_odometry").exists():
+            ROOT = ROOT.parent
+
+        SCRIPT_DIR = ROOT / "scripts" / "python_visual_odometry"
+        if str(SCRIPT_DIR) not in sys.path:
+            sys.path.insert(0, str(SCRIPT_DIR))
 
         import camera
         import common
@@ -84,18 +97,33 @@ nb.cells = [
         plt.rcParams["figure.figsize"] = (8, 5)
         np.set_printoptions(precision=6, suppress=True)
 
-        ROOT = Path.cwd()
+        # =========================
+        # Parametres a modifier
+        # =========================
         DATASET_DIR = ROOT / "dataset" / "desktop_dataset"
         IMAGE_DIR = DATASET_DIR / "images"
         DEPTH_DIR = DATASET_DIR / "depth"
 
         KEYFRAME_INDEX = 0
         TARGET_INDEX = 1
+        SHOW_SOLVER_DEBUG = False
+
+        CAMERA_FX = 525.0
+        CAMERA_FY = 525.0
+        CAMERA_CX = 319.5
+        CAMERA_CY = 239.5
 
         print("ROOT =", ROOT)
         print("DATASET_DIR =", DATASET_DIR)
+        print("IMAGE_DIR =", IMAGE_DIR)
+        print("DEPTH_DIR =", DEPTH_DIR)
         print("KEYFRAME_INDEX =", KEYFRAME_INDEX)
         print("TARGET_INDEX =", TARGET_INDEX)
+        print("SHOW_SOLVER_DEBUG =", SHOW_SOLVER_DEBUG)
+        print("CAMERA_FX =", CAMERA_FX)
+        print("CAMERA_FY =", CAMERA_FY)
+        print("CAMERA_CX =", CAMERA_CX)
+        print("CAMERA_CY =", CAMERA_CY)
         """
     ),
     md(
@@ -202,22 +230,28 @@ nb.cells = [
         - `setImage(...)` construit la pyramide de l'image
         - `setInvDepth(...)` redimensionne aussi l'inverse depth sur chaque niveau
 
-        Ici, les intrinseques ne sont plus estimes automatiquement :
-        tu renseignes directement `fx`, `fy`, `cx`, `cy` a partir de ton ground truth camera.
+        Ici, les intrinseques viennent directement de la cellule de parametres du notebook.
+        Il n'y a pas d'autre valeur cachee ailleurs dans cette version.
         """
     ),
     code(
         """
         height, width = keyframe_image.shape
 
-        # Ground truth camera intrinsics used everywhere in this project.
-        fx = 525.0
-        fy = 525.0
-        cx = 319.5
-        cy = 239.5
-        factor = 5000
+        cam = camera.camera(
+            CAMERA_FX,
+            CAMERA_FY,
+            CAMERA_CX,
+            CAMERA_CY,
+            width,
+            height,
+        )
 
-        cam = camera.camera(fx, fy, cx, cy, width, height)
+        print("Camera intrinsics used by pose_solver:")
+        print("fx =", CAMERA_FX)
+        print("fy =", CAMERA_FY)
+        print("cx =", CAMERA_CX)
+        print("cy =", CAMERA_CY)
 
         keyframe = frameData.frameData()
         keyframe.setImage(keyframe_image)
@@ -278,7 +312,10 @@ nb.cells = [
     ),
     code(
         """
-        pose_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(cam, show_debug=False)
+        pose_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(
+            cam,
+            show_debug=SHOW_SOLVER_DEBUG,
+        )
 
         initial_error_lvl4, _ = pose_solver.computeError(current_frame, keyframe, lvl=4)
         initial_error_lvl3, _ = pose_solver.computeError(current_frame, keyframe, lvl=3)
@@ -644,7 +681,10 @@ nb.cells = [
     code(
         """
         results = []
-        sequence_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(cam, show_debug=False)
+        sequence_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(
+            cam,
+            show_debug=SHOW_SOLVER_DEBUG,
+        )
 
         for idx in range(1, 4):
             frame = frameData.frameData()
