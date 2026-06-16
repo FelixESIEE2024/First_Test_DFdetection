@@ -44,11 +44,15 @@ class pose_estimator_gauss_newton:
             poinKeyframe = np.array([fxinv*x + cxinv, fyinv*y + cyinv,1.0])/invDepth;
             pointFrame = relativePose.dot(poinKeyframe);
 
+
+            #Si le point est derriere la camera, on ne le prend pas en compte
             if pointFrame[2] <= 0.0:
                 continue;
 
             pixelFrame = np.array([fx*pointFrame[0]/pointFrame[2] + cx, fy*pointFrame[1]/pointFrame[2] + cy])
 
+
+            #si le point projeté est en dehors de l'image, on ne le prend pas en compte
             if pixelFrame[0] < 1.0 or pixelFrame[0] >= width-1 or pixelFrame[1] < 1.0 or pixelFrame[1] >= height-1:
                 continue;
 
