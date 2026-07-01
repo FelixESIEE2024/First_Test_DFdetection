@@ -1,0 +1,218 @@
+{
+  "index": 41,
+  "image_name": "frame_00041.png",
+  "image_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\frames_fake\\frame_00041.png",
+  "output_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel\\frames_fake\\frame_00041",
+  "depth_valid_ratio": 1.0,
+  "pose_matrix": [
+    [
+      0.9918587223368293,
+      -0.023280091647226765,
+      -0.06887453329291911,
+      0.12993074849089975
+    ],
+    [
+      0.024288076913240513,
+      0.9997256513323999,
+      0.00533748444403958,
+      0.0015305612043771584
+    ],
+    [
+      0.06822267369324753,
+      -0.007008139127531123,
+      0.9963161807563615,
+      -0.20712126656296315
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "frame_role": "frame",
+  "tracking_mode": "frame_to_frame_sliding_keyframe",
+  "reference_frame_name": "frame_00040.png",
+  "frame_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\frames_fake\\calib\\frame_00041.txt",
+    "source_image_size": {
+      "width": 1104,
+      "height": 832
+    },
+    "user_intrinsics": {
+      "fx": 874.180419921875,
+      "fy": 874.180419921875,
+      "cx": 360.0,
+      "cy": 240.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 506.7712579257247,
+      "fy": 504.33485764723554,
+      "cx": 208.69565217391306,
+      "cy": 138.46153846153845
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 506.7712579257247,
+        "fy": 504.33485764723554,
+        "cx": 208.69565217391306,
+        "cy": 138.46153846153845
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 253.38562896286234,
+        "fy": 252.16742882361777,
+        "cx": 104.34782608695653,
+        "cy": 69.23076923076923
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 126.69281448143117,
+        "fy": 126.08371441180888,
+        "cx": 52.173913043478265,
+        "cy": 34.61538461538461
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 63.346407240715585,
+        "fy": 63.04185720590444,
+        "cx": 26.086956521739133,
+        "cy": 17.307692307692307
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 31.673203620357793,
+        "fy": 31.52092860295222,
+        "cx": 13.043478260869566,
+        "cy": 8.653846153846153
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "keyframe_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\frames_fake\\calib\\frame_00040.txt",
+    "source_image_size": {
+      "width": 1104,
+      "height": 832
+    },
+    "user_intrinsics": {
+      "fx": 874.180419921875,
+      "fy": 874.180419921875,
+      "cx": 360.0,
+      "cy": 240.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 506.7712579257247,
+      "fy": 504.33485764723554,
+      "cx": 208.69565217391306,
+      "cy": 138.46153846153845
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 506.7712579257247,
+        "fy": 504.33485764723554,
+        "cx": 208.69565217391306,
+        "cy": 138.46153846153845
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 253.38562896286234,
+        "fy": 252.16742882361777,
+        "cx": 104.34782608695653,
+        "cy": 69.23076923076923
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 126.69281448143117,
+        "fy": 126.08371441180888,
+        "cx": 52.173913043478265,
+        "cy": 34.61538461538461
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 63.346407240715585,
+        "fy": 63.04185720590444,
+        "cx": 26.086956521739133,
+        "cy": 17.307692307692307
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 31.673203620357793,
+        "fy": 31.52092860295222,
+        "cx": 13.043478260869566,
+        "cy": 8.653846153846153
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "photometric_error": 37328216.0,
+  "photometric_error_mean": 4.2060136795043945,
+  "photometric_error_cumulative": 418468355.0,
+  "valid_pixel_count": 303193,
+  "projected_candidate_count": 304238,
+  "occluded_pixel_count": 1045,
+  "histogram_counts": [
+    0,
+    29,
+    460,
+    3090,
+    4750,
+    20217,
+    274647
+  ],
+  "optimization_summary": {
+    "lvl4_initial": 151.15675506515674,
+    "lvl4_final": 151.73410044659482,
+    "lvl3_initial": 157.77520499046608,
+    "lvl3_final": 156.94219948700496,
+    "lvl2_initial": 152.55571986530714,
+    "lvl2_final": 143.91893950258103,
+    "lvl4_improvement": -0.5773453814380787,
+    "lvl3_improvement": 0.8330055034611235,
+    "lvl2_improvement": 8.636780362726114
+  },
+  "errors_improved_by_level": {
+    "lvl4": false,
+    "lvl3": true,
+    "lvl2": true
+  },
+  "relative_pose_to_keyframe": {
+    "translation_norm": 0.029633987135163253,
+    "rotation_deg": 6.664189127525092
+  },
+  "pose_is_finite": true
+}

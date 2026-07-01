@@ -16,7 +16,6 @@ import matplotlib
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torchvision.transforms import Compose
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -67,10 +66,22 @@ HEATMAP_PERCENTILE_LOW = 2.0
 HEATMAP_PERCENTILE_HIGH = 98.0
 HEATMAP_MIN_VMAX = 0.05
 HEATMAP_CMAP_NAME = "magma"
+HEATMAP_MIN_ABS_ERROR_DISPLAY = 10.0
+VISIBILITY_REL_DEPTH_EPS = 0.02
 HEATMAP_PANEL_BACKGROUND = (18, 18, 18)
 HEATMAP_PANEL_BORDER = (52, 52, 52)
 HEATMAP_PANEL_TEXT = (235, 235, 235)
 HEATMAP_INVALID_BGR = (28, 28, 28)
+
+
+class Compose:
+    def __init__(self, transforms: list[Any]) -> None:
+        self.transforms = transforms
+
+    def __call__(self, data: Any) -> Any:
+        for transform in self.transforms:
+            data = transform(data)
+        return data
 
 
 def parse_args() -> argparse.Namespace:
@@ -100,7 +111,45 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Delete the output run folder first if it already exists.",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--max-frames",
+        type=int,
+        default=None,
+        help=(
+            "Optional smoke-test limit. Example: --max-frames 10. "
+            "The shorthand --10 / --20 / ... is also accepted."
+        ),
+    )
+
+    args, unknown_args = parser.parse_known_args()
+
+    shorthand_max_frames: int | None = None
+    remaining_unknown_args: list[str] = []
+    for raw_arg in unknown_args:
+        shorthand_match = re.fullmatch(r"--(\d+)", raw_arg)
+        if shorthand_match is None:
+            remaining_unknown_args.append(raw_arg)
+            continue
+
+        parsed_value = int(shorthand_match.group(1))
+        if parsed_value <= 0:
+            parser.error("Le raccourci --N doit utiliser un entier strictement positif.")
+        if shorthand_max_frames is not None and shorthand_max_frames != parsed_value:
+            parser.error("Un seul raccourci --N peut etre fourni.")
+        shorthand_max_frames = parsed_value
+
+    if remaining_unknown_args:
+        parser.error(f"Arguments non reconnus: {' '.join(remaining_unknown_args)}")
+
+    if shorthand_max_frames is not None:
+        if args.max_frames is not None and args.max_frames != shorthand_max_frames:
+            parser.error("Utilise soit --max-frames N, soit le raccourci --N avec la meme valeur.")
+        args.max_frames = shorthand_max_frames
+
+    if args.max_frames is not None and args.max_frames <= 0:
+        parser.error("--max-frames doit etre strictement positif.")
+
+    return args
 
 
 def resolve_path(path_like: str | Path) -> Path:
@@ -311,7 +360,7 @@ def ensure_run_directories(output_root: Path, run_name: str, overwrite: bool) ->
     return run_dir, recap_dir
 
 
-def collect_frame_paths(input_dir: Path) -> list[Path]:
+def collect_frame_paths(input_dir: Path, max_frames: int | None = None) -> list[Path]:
     def natural_sort_key(path: Path) -> list[Any]:
         parts = re.split(r"(\d+)", path.name.lower())
         key: list[Any] = []
@@ -331,6 +380,14 @@ def collect_frame_paths(input_dir: Path) -> list[Path]:
         raise ValueError(
             f"Il faut au moins 2 frames dans {input_dir}. Trouve: {len(frame_paths)}."
         )
+
+    if max_frames is not None:
+        frame_paths = frame_paths[:max_frames]
+        if len(frame_paths) < 2:
+            raise ValueError(
+                f"--max-frames={max_frames} laisse moins de 2 frames exploitables dans {input_dir}."
+            )
+
     return frame_paths
 
 
@@ -460,6 +517,8 @@ def compute_photometric_error(
 
     squared_error_map = np.full((height, width), np.nan, dtype=np.float32)
     valid_mask = np.zeros((height, width), dtype=bool)
+    z_buffer = np.full((frame_height, frame_width), np.inf, dtype=np.float32)
+    projected_candidates: list[tuple[int, int, np.ndarray, float]] = []
 
     for y in range(height):
         for x in range(width):
@@ -487,12 +546,34 @@ def compute_photometric_error(
             ):
                 continue
 
-            key_intensity = float(keyframe.image[lvl][y, x])
-            observed_intensity = float(common.getSubPixelValue(frame.image[lvl], pixel_frame))
-            squared_error = (key_intensity - observed_intensity) ** 2
+            projected_candidates.append((x, y, pixel_frame, float(point_frame[2])))
 
-            squared_error_map[y, x] = squared_error
-            valid_mask[y, x] = True
+            projected_x = int(round(float(pixel_frame[0])))
+            projected_y = int(round(float(pixel_frame[1])))
+            projected_x = int(np.clip(projected_x, 0, frame_width - 1))
+            projected_y = int(np.clip(projected_y, 0, frame_height - 1))
+            z_buffer[projected_y, projected_x] = min(z_buffer[projected_y, projected_x], float(point_frame[2]))
+
+    occluded_pixel_count = 0
+    for x, y, pixel_frame, projected_depth in projected_candidates:
+        projected_x = int(round(float(pixel_frame[0])))
+        projected_y = int(round(float(pixel_frame[1])))
+        projected_x = int(np.clip(projected_x, 0, frame_width - 1))
+        projected_y = int(np.clip(projected_y, 0, frame_height - 1))
+
+        closest_depth = float(z_buffer[projected_y, projected_x])
+        if not np.isfinite(closest_depth):
+            continue
+        if projected_depth > closest_depth * (1.0 + VISIBILITY_REL_DEPTH_EPS):
+            occluded_pixel_count += 1
+            continue
+
+        key_intensity = float(keyframe.image[lvl][y, x])
+        observed_intensity = float(common.getSubPixelValue(frame.image[lvl], pixel_frame))
+        squared_error = (key_intensity - observed_intensity) ** 2
+
+        squared_error_map[y, x] = squared_error
+        valid_mask[y, x] = True
 
     photometric_error = float(np.nansum(squared_error_map[valid_mask]))
 
@@ -500,6 +581,9 @@ def compute_photometric_error(
         "photometric_error": photometric_error,
         "squared_error_map": squared_error_map,
         "valid_mask": valid_mask,
+        "projected_candidate_count": int(len(projected_candidates)),
+        "occluded_pixel_count": int(occluded_pixel_count),
+        "visible_pixel_count": int(np.count_nonzero(valid_mask)),
         "level": lvl,
     }
 
@@ -514,6 +598,20 @@ def compute_histogram_counts(valid_abs_errors: np.ndarray) -> list[int]:
         int(np.sum((valid_abs_errors >= 10) & (valid_abs_errors < 30))),
         int(np.sum((valid_abs_errors >= 0) & (valid_abs_errors < 10))),
     ]
+
+
+def summarize_relative_pose(frame_pose: Any, keyframe_pose: Any) -> dict[str, float]:
+    relative_pose_matrix = frame_pose.dot(keyframe_pose.inv()).as_matrix()
+    translation_norm = float(np.linalg.norm(relative_pose_matrix[:3, 3]))
+
+    rotation_trace = float(np.trace(relative_pose_matrix[:3, :3]))
+    rotation_cos = np.clip((rotation_trace - 1.0) / 2.0, -1.0, 1.0)
+    rotation_deg = float(np.degrees(np.arccos(rotation_cos)))
+
+    return {
+        "translation_norm": translation_norm,
+        "rotation_deg": rotation_deg,
+    }
 
 
 def make_serializable(value: Any) -> Any:
@@ -645,6 +743,15 @@ def normalize_error_map_for_display(
     return normalized_map.astype(np.float32), vmin, vmax
 
 
+def build_heatmap_display_mask(
+    squared_error_map: np.ndarray,
+    valid_mask: np.ndarray,
+    min_abs_error: float = HEATMAP_MIN_ABS_ERROR_DISPLAY,
+) -> np.ndarray:
+    abs_error_map = np.sqrt(np.clip(np.asarray(squared_error_map, dtype=np.float32), 0.0, None))
+    return valid_mask & np.isfinite(abs_error_map) & (abs_error_map >= float(min_abs_error))
+
+
 def to_bgr_grayscale(image: np.ndarray) -> np.ndarray:
     gray_image = np.asarray(image)
     if gray_image.ndim != 2:
@@ -756,15 +863,15 @@ def build_dynamic_error_heatmap_frame(
             interpolation=cv2.INTER_AREA,
         )
 
+    display_valid_mask = build_heatmap_display_mask(squared_error_map, valid_mask)
     reference_bgr = to_bgr_grayscale(reference_gray_image)
-    heatmap_bgr = colorize_error_map(squared_error_map, valid_mask, cmap_name=HEATMAP_CMAP_NAME)
-    overlay_bgr = build_overlay_panel(reference_gray_image, heatmap_bgr, valid_mask)
+    heatmap_bgr = colorize_error_map(squared_error_map, display_valid_mask, cmap_name=HEATMAP_CMAP_NAME)
+    colored_frame_bgr = build_overlay_panel(reference_gray_image, heatmap_bgr, display_valid_mask)
 
     return compose_heatmap_panels(
         [
-            ("Reference keyframe", reference_bgr),
-            ("Photometric heatmap", heatmap_bgr),
-            ("Overlay", overlay_bgr),
+            ("Original frame", reference_bgr),
+            ("Colored frame", colored_frame_bgr),
         ]
     )
 
@@ -827,21 +934,31 @@ def save_mean_histogram_plot(output_path: Path, mean_histogram_counts: np.ndarra
 
 
 def save_photometric_error_curve(output_path: Path, run_name: str, iteration_indices: list[int], photometric_errors: list[float]) -> float:
-    mean_photometric_error = float(np.mean(photometric_errors))
+    photometric_errors_array = np.asarray(photometric_errors, dtype=np.float64)
+    mean_photometric_error = float(np.mean(photometric_errors_array))
+    cbrt_photometric_errors = np.cbrt(np.clip(photometric_errors_array, 0.0, None))
+    mean_cbrt_photometric_error = float(np.mean(cbrt_photometric_errors))
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(iteration_indices, photometric_errors, marker="o", color="#4C78A8", label="Photometric error")
+    ax.plot(
+        iteration_indices,
+        cbrt_photometric_errors,
+        marker="o",
+        color="#4C78A8",
+        label="cuberoot(Photometric error)",
+    )
     ax.axhline(
-        mean_photometric_error,
+        mean_cbrt_photometric_error,
         color="#E45756",
         linestyle="--",
         linewidth=2,
-        label=f"Mean = {mean_photometric_error:.6f}",
+        label=f"Mean cbrt = {mean_cbrt_photometric_error:.0f}",
     )
-    ax.set_title(f"{run_name} : moyenne de la photometric error sur les iterations valides")
+    ax.set_title(f"{run_name} : racine cubique de la photometric error sur les iterations valides")
     ax.set_xlabel("Iteration")
-    ax.set_ylabel("Photometric error")
+    ax.set_ylabel("cuberoot(Photometric error)")
     ax.grid(alpha=0.25)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.StrMethodFormatter("{x:.0f}"))
     ax.legend()
 
     fig.tight_layout()
@@ -901,6 +1018,7 @@ def run_sequence(
         source_height=sequence_height,
         calib_path=keyframe_calib_path,
     )
+    initial_keyframe_intrinsics_summary = copy.deepcopy(keyframe_intrinsics_summary)
 
     print(f"Sequence {run_name}:")
     print(f"  input dir = {frame_paths[0].parent}")
@@ -908,12 +1026,15 @@ def run_sequence(
     print(f"  source size = {sequence_width} x {sequence_height}")
     print(f"  intrinsics mode = {intrinsics_mode_summary['mode']}")
     print(f"  working size level-0 = {keyframe_cam.width[0]} x {keyframe_cam.height[0]}")
+    print("  tracking mode = frame-to-frame with sliding keyframe")
     print(f"  output run dir = {run_dir}")
     print()
 
     sequence_keyframe: frameData.frameData | None = None
     sequence_results: list[dict[str, Any]] = []
     heatmap_video_frames: list[np.ndarray] = []
+    pending_visualization: dict[str, Any] | None = None
+    sequence_keyframe_name = first_image_path.name
 
     for step, image_path in enumerate(frame_paths):
         image = load_gray_image(image_path)
@@ -954,13 +1075,6 @@ def run_sequence(
         if step == 0:
             sequence_keyframe = copy.deepcopy(current_frame)
             pose_matrix = current_frame.pose.as_matrix()
-            keyframe_heatmap = save_dynamic_error_heatmap(
-                frame_output_dir / "photometric_error_heatmap.png",
-                sequence_keyframe.image[0],
-                np.zeros((keyframe_cam.height[0], keyframe_cam.width[0]), dtype=np.float32),
-                np.zeros((keyframe_cam.height[0], keyframe_cam.width[0]), dtype=bool),
-            )
-            heatmap_video_frames.append(keyframe_heatmap)
 
             frame_record = create_frame_record_base(
                 index=step,
@@ -972,6 +1086,8 @@ def run_sequence(
             frame_record.update(
                 {
                     "frame_role": "keyframe",
+                    "tracking_mode": "frame_to_frame_sliding_keyframe",
+                    "reference_frame_name": None,
                     "frame_intrinsics": current_intrinsics_summary,
                     "keyframe_intrinsics": current_intrinsics_summary,
                     "photometric_error": None,
@@ -988,12 +1104,33 @@ def run_sequence(
             np.savetxt(frame_output_dir / "pose_matrix.txt", pose_matrix, fmt="%.9f")
             write_json(frame_output_dir / "frame_metrics.json", frame_record)
             sequence_results.append(frame_record)
+            pending_visualization = {
+                "frame_data": copy.deepcopy(current_frame),
+                "camera": current_cam,
+                "display_image": current_frame.image[0].copy(),
+                "output_dir": frame_output_dir,
+                "image_name": image_path.name,
+                "intrinsics_summary": copy.deepcopy(current_intrinsics_summary),
+            }
 
-            print(f"[{run_name}] frame {step} -> keyframe de reference: {image_path.name}")
+            print(f"[{run_name}] frame {step} -> keyframe initiale: {image_path.name}")
             continue
 
         if sequence_keyframe is None:
             raise RuntimeError("Keyframe non initialisee.")
+        if pending_visualization is None:
+            raise RuntimeError("La frame source pour la visualisation consecutive est manquante.")
+
+        current_frame.pose = copy.copy(sequence_keyframe.pose)
+        pair_index = step - 1
+        print(
+            f"[{run_name}] pair {pair_index:04d} | "
+            f"keyframe={sequence_keyframe_name} -> frame={image_path.name}"
+        )
+        print(
+            f"[{run_name}] pair {pair_index:04d} | "
+            "initialisation de pose = pose de la keyframe precedente"
+        )
 
         sequence_pose_solver.set_cameras(current_cam, keyframe_cam)
         initial_error_lvl4, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=4)
@@ -1019,8 +1156,11 @@ def run_sequence(
 
         photometric_error = float(evaluation["photometric_error"])
         photometric_error_mean = float(valid_abs_errors.mean()) if valid_abs_errors.size > 0 else None
-        valid_pixel_count = int(valid_abs_errors.size)
+        valid_pixel_count = int(evaluation["visible_pixel_count"])
+        projected_candidate_count = int(evaluation["projected_candidate_count"])
+        occluded_pixel_count = int(evaluation["occluded_pixel_count"])
         histogram_counts = compute_histogram_counts(valid_abs_errors)
+        relative_pose_stats = summarize_relative_pose(current_frame.pose, sequence_keyframe.pose)
 
         optimization_summary = {
             "lvl4_initial": float(initial_error_lvl4),
@@ -1052,17 +1192,10 @@ def run_sequence(
             run_name,
         )
         save_squared_error_map_plot(
-            frame_output_dir / "squared_photometric_error_map.png",
+            pending_visualization["output_dir"] / "squared_photometric_error_map.png",
             evaluation["squared_error_map"],
             valid_mask,
         )
-        heatmap_frame = save_dynamic_error_heatmap(
-            frame_output_dir / "photometric_error_heatmap.png",
-            sequence_keyframe.image[0],
-            evaluation["squared_error_map"],
-            valid_mask,
-        )
-        heatmap_video_frames.append(heatmap_frame)
 
         frame_record = create_frame_record_base(
             index=step,
@@ -1074,15 +1207,20 @@ def run_sequence(
         frame_record.update(
             {
                 "frame_role": "frame",
+                "tracking_mode": "frame_to_frame_sliding_keyframe",
+                "reference_frame_name": sequence_keyframe_name,
                 "frame_intrinsics": current_intrinsics_summary,
                 "keyframe_intrinsics": keyframe_intrinsics_summary,
                 "photometric_error": photometric_error,
                 "photometric_error_mean": photometric_error_mean,
                 "photometric_error_cumulative": None,
                 "valid_pixel_count": valid_pixel_count,
+                "projected_candidate_count": projected_candidate_count,
+                "occluded_pixel_count": occluded_pixel_count,
                 "histogram_counts": histogram_counts,
                 "optimization_summary": optimization_summary,
                 "errors_improved_by_level": errors_improved_by_level,
+                "relative_pose_to_keyframe": relative_pose_stats,
                 "pose_is_finite": pose_is_finite,
             }
         )
@@ -1091,13 +1229,50 @@ def run_sequence(
         write_json(frame_output_dir / "frame_metrics.json", frame_record)
         sequence_results.append(frame_record)
 
+        heatmap_frame = save_dynamic_error_heatmap(
+            pending_visualization["output_dir"] / "photometric_error_heatmap.png",
+            pending_visualization["display_image"],
+            evaluation["squared_error_map"],
+            valid_mask,
+        )
+        heatmap_video_frames.append(heatmap_frame)
+
         mean_error_display = f"{photometric_error_mean:.4f}" if photometric_error_mean is not None else "None"
         print(
-            f"[{run_name}] frame {step} -> {image_path.name} | "
+            f"[{run_name}] pair {pair_index:04d} ok | "
+            f"source={sequence_keyframe_name} | target={image_path.name} | "
             f"sum error = {photometric_error:.2f} | "
             f"mean abs error = {mean_error_display} | "
-            f"valid pixels = {valid_pixel_count}"
+            f"visible pixels = {valid_pixel_count}/{projected_candidate_count} | "
+            f"occluded rejects = {occluded_pixel_count} | "
+            f"rel t = {relative_pose_stats['translation_norm']:.6f} | "
+            f"rel r = {relative_pose_stats['rotation_deg']:.3f} deg"
         )
+        print(f"[{run_name}] keyframe updatee -> {image_path.name}")
+
+        sequence_keyframe = copy.deepcopy(current_frame)
+        keyframe_cam = current_cam
+        keyframe_intrinsics_summary = copy.deepcopy(current_intrinsics_summary)
+        sequence_keyframe_name = image_path.name
+        pending_visualization = {
+            "frame_data": copy.deepcopy(current_frame),
+            "camera": current_cam,
+            "display_image": current_frame.image[0].copy(),
+            "output_dir": frame_output_dir,
+            "image_name": image_path.name,
+            "intrinsics_summary": copy.deepcopy(current_intrinsics_summary),
+        }
+
+    if pending_visualization is not None:
+        final_empty_error_map = np.zeros(pending_visualization["display_image"].shape[:2], dtype=np.float32)
+        final_empty_mask = np.zeros(pending_visualization["display_image"].shape[:2], dtype=bool)
+        final_heatmap_frame = save_dynamic_error_heatmap(
+            pending_visualization["output_dir"] / "photometric_error_heatmap.png",
+            pending_visualization["display_image"],
+            final_empty_error_map,
+            final_empty_mask,
+        )
+        heatmap_video_frames.append(final_heatmap_frame)
 
     valid_histogram_results = [
         item for item in sequence_results if item.get("histogram_counts") is not None
@@ -1147,19 +1322,22 @@ def run_sequence(
 
     summary = {
         "run_name": run_name,
+        "tracking_mode": "frame_to_frame_sliding_keyframe",
         "project_root": str(PROJECT_ROOT),
         "input_dir": str(frame_paths[0].parent),
         "output_run_dir": str(run_dir),
         "recap_dir": str(recap_dir),
         "frames_processed": len(frame_paths),
         "frames_evaluated": len(valid_results),
-        "keyframe_name": frame_paths[0].name,
+        "initial_keyframe_name": frame_paths[0].name,
+        "final_keyframe_name": sequence_keyframe_name,
         "depth_encoder": DEPTH_ENCODER,
         "depth_model_name": DEPTH_MODEL_NAME,
         "device": DEVICE,
         "intrinsics": {
             "mode_summary": intrinsics_mode_summary,
-            "keyframe_intrinsics": keyframe_intrinsics_summary,
+            "keyframe_intrinsics": initial_keyframe_intrinsics_summary,
+            "final_keyframe_intrinsics": keyframe_intrinsics_summary,
         },
         "photometric_metrics": {
             "cumulative_photometric_error": cumulative_photometric_error,
@@ -1196,7 +1374,9 @@ def main() -> int:
 
     run_name = args.run_name or input_dir.name
     run_dir, recap_dir = ensure_run_directories(output_root, run_name, args.overwrite)
-    frame_paths = collect_frame_paths(input_dir)
+    frame_paths = collect_frame_paths(input_dir, max_frames=args.max_frames)
+    if args.max_frames is not None:
+        print(f"Smoke test active: limitation aux {len(frame_paths)} premieres frames.")
     has_calib_dir = (input_dir / "calib").is_dir()
     default_intrinsics = validate_intrinsics(require_complete=not has_calib_dir)
     intrinsics_by_frame, intrinsics_mode_summary = resolve_sequence_intrinsics(

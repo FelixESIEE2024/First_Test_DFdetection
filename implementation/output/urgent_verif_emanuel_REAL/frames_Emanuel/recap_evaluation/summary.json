@@ -1,0 +1,223 @@
+{
+  "run_name": "frames_Emanuel",
+  "tracking_mode": "frame_to_frame_sliding_keyframe",
+  "project_root": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1",
+  "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\images\\frames_Emanuel",
+  "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel",
+  "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel\\recap_evaluation",
+  "frames_processed": 50,
+  "frames_evaluated": 49,
+  "initial_keyframe_name": "frame_00000.png",
+  "final_keyframe_name": "frame_00049.png",
+  "depth_encoder": "vitb",
+  "depth_model_name": "LiheYoung/depth_anything_vitb14",
+  "device": "cpu",
+  "intrinsics": {
+    "mode_summary": {
+      "mode": "per_frame_calib",
+      "calib_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\images\\frames_Emanuel\\calib",
+      "fallback_intrinsics": {
+        "fx": 1310.400005464747,
+        "fy": 1310.400005464747,
+        "cx": 1820.0,
+        "cy": 1024.0
+      },
+      "source_intrinsics_statistics": {
+        "fx": {
+          "min": 481.2,
+          "max": 481.2,
+          "mean": 481.2
+        },
+        "fy": {
+          "min": 480.0,
+          "max": 480.0,
+          "mean": 480.0
+        },
+        "cx": {
+          "min": 319.5,
+          "max": 319.5,
+          "mean": 319.5
+        },
+        "cy": {
+          "min": 239.5,
+          "max": 239.5,
+          "mean": 239.5
+        }
+      }
+    },
+    "keyframe_intrinsics": {
+      "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\images\\frames_Emanuel\\calib\\frame_00000.txt",
+      "source_image_size": {
+        "width": 640,
+        "height": 480
+      },
+      "user_intrinsics": {
+        "fx": 481.2,
+        "fy": 480.0,
+        "cx": 319.5,
+        "cy": 239.5
+      },
+      "internal_level0_intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 481.2,
+        "fy": 480.0,
+        "cx": 319.5,
+        "cy": 239.5
+      },
+      "pyramid_intrinsics": [
+        {
+          "level": 0,
+          "width": 640,
+          "height": 480,
+          "fx": 481.2,
+          "fy": 480.0,
+          "cx": 319.5,
+          "cy": 239.5
+        },
+        {
+          "level": 1,
+          "width": 320,
+          "height": 240,
+          "fx": 240.6,
+          "fy": 240.0,
+          "cx": 159.75,
+          "cy": 119.75
+        },
+        {
+          "level": 2,
+          "width": 160,
+          "height": 120,
+          "fx": 120.3,
+          "fy": 120.0,
+          "cx": 79.875,
+          "cy": 59.875
+        },
+        {
+          "level": 3,
+          "width": 80,
+          "height": 60,
+          "fx": 60.15,
+          "fy": 60.0,
+          "cx": 39.9375,
+          "cy": 29.9375
+        },
+        {
+          "level": 4,
+          "width": 40,
+          "height": 30,
+          "fx": 30.075,
+          "fy": 30.0,
+          "cx": 19.96875,
+          "cy": 14.96875
+        }
+      ],
+      "internal_params": {
+        "image_width": 640,
+        "image_height": 480,
+        "max_levels": 5
+      }
+    },
+    "final_keyframe_intrinsics": {
+      "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\artificial\\Emanuel\\images\\frames_Emanuel\\calib\\frame_00049.txt",
+      "source_image_size": {
+        "width": 640,
+        "height": 480
+      },
+      "user_intrinsics": {
+        "fx": 481.2,
+        "fy": 480.0,
+        "cx": 319.5,
+        "cy": 239.5
+      },
+      "internal_level0_intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 481.2,
+        "fy": 480.0,
+        "cx": 319.5,
+        "cy": 239.5
+      },
+      "pyramid_intrinsics": [
+        {
+          "level": 0,
+          "width": 640,
+          "height": 480,
+          "fx": 481.2,
+          "fy": 480.0,
+          "cx": 319.5,
+          "cy": 239.5
+        },
+        {
+          "level": 1,
+          "width": 320,
+          "height": 240,
+          "fx": 240.6,
+          "fy": 240.0,
+          "cx": 159.75,
+          "cy": 119.75
+        },
+        {
+          "level": 2,
+          "width": 160,
+          "height": 120,
+          "fx": 120.3,
+          "fy": 120.0,
+          "cx": 79.875,
+          "cy": 59.875
+        },
+        {
+          "level": 3,
+          "width": 80,
+          "height": 60,
+          "fx": 60.15,
+          "fy": 60.0,
+          "cx": 39.9375,
+          "cy": 29.9375
+        },
+        {
+          "level": 4,
+          "width": 40,
+          "height": 30,
+          "fx": 30.075,
+          "fy": 30.0,
+          "cx": 19.96875,
+          "cy": 14.96875
+        }
+      ],
+      "internal_params": {
+        "image_width": 640,
+        "image_height": 480,
+        "max_levels": 5
+      }
+    }
+  },
+  "photometric_metrics": {
+    "cumulative_photometric_error": 6960516218.0,
+    "mean_photometric_error": 142051351.3877551,
+    "histogram_labels": [
+      "> 200",
+      "150 - 200",
+      "100 - 150",
+      "50 - 100",
+      "30 - 50",
+      "10 - 30",
+      "0 - 10"
+    ],
+    "mean_histogram_counts": [
+      4.204081632653061,
+      132.9387755102041,
+      1994.8775510204082,
+      14755.387755102041,
+      14548.632653061224,
+      44924.08163265306,
+      214042.693877551
+    ]
+  },
+  "output_files": {
+    "mean_histogram": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel\\recap_evaluation\\mean_histogram.png",
+    "photometric_error_curve": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel\\recap_evaluation\\photometric_error_curve.png",
+    "photometric_error_heatmap_video": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel\\recap_evaluation\\photometric_error_heatmap_video.mp4",
+    "sequence_results_json": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\urgent_verif_emanuel_REAL\\frames_Emanuel\\recap_evaluation\\sequence_results.json"
+  }
+}
