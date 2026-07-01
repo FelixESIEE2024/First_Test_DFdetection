@@ -1,0 +1,210 @@
+{
+  "index": 106,
+  "image_name": "frame_00106.png",
+  "image_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150\\frame_00106.png",
+  "output_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics\\frame_00106",
+  "depth_valid_ratio": 0.8984330610795455,
+  "pose_matrix": [
+    [
+      0.15833481604415522,
+      -0.5194125598954069,
+      0.8397265499263233,
+      -64.67087565691506
+    ],
+    [
+      0.30665542090892856,
+      0.8342673947915554,
+      0.4582143241048607,
+      129.1909554218465
+    ],
+    [
+      -0.9385587562083859,
+      0.1849554179001178,
+      0.29137425166606806,
+      213.45760348248146
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "frame_role": "frame",
+  "frame_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150\\calib\\frame_00106.txt",
+    "source_image_size": {
+      "width": 704,
+      "height": 1280
+    },
+    "user_intrinsics": {
+      "fx": 880.2843017578125,
+      "fy": 880.2842407226562,
+      "cx": 352.0,
+      "cy": 640.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 800.2584561434659,
+      "fy": 330.1065902709961,
+      "cx": 320.0,
+      "cy": 240.0
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 800.2584561434659,
+        "fy": 330.1065902709961,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 400.12922807173294,
+        "fy": 165.05329513549805,
+        "cx": 160.0,
+        "cy": 120.0
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 200.06461403586647,
+        "fy": 82.52664756774902,
+        "cx": 80.0,
+        "cy": 60.0
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 100.03230701793323,
+        "fy": 41.26332378387451,
+        "cx": 40.0,
+        "cy": 30.0
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 50.01615350896662,
+        "fy": 20.631661891937256,
+        "cx": 20.0,
+        "cy": 15.0
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "keyframe_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150\\calib\\frame_00000.txt",
+    "source_image_size": {
+      "width": 704,
+      "height": 1280
+    },
+    "user_intrinsics": {
+      "fx": 977.5416259765625,
+      "fy": 977.54150390625,
+      "cx": 352.0,
+      "cy": 640.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 888.6742054332386,
+      "fy": 366.57806396484375,
+      "cx": 320.0,
+      "cy": 240.0
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 888.6742054332386,
+        "fy": 366.57806396484375,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 444.3371027166193,
+        "fy": 183.28903198242188,
+        "cx": 160.0,
+        "cy": 120.0
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 222.16855135830966,
+        "fy": 91.64451599121094,
+        "cx": 80.0,
+        "cy": 60.0
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 111.08427567915483,
+        "fy": 45.82225799560547,
+        "cx": 40.0,
+        "cy": 30.0
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 55.542137839577414,
+        "fy": 22.911128997802734,
+        "cx": 20.0,
+        "cy": 15.0
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "photometric_error": 164023712.0,
+  "photometric_error_mean": 23.16165542602539,
+  "photometric_error_cumulative": 22509893568.0,
+  "valid_pixel_count": 163579,
+  "histogram_counts": [
+    0,
+    11,
+    1384,
+    16551,
+    22677,
+    75311,
+    47645
+  ],
+  "optimization_summary": {
+    "lvl4_initial": 2736.8742297277045,
+    "lvl4_final": 1183.862674583259,
+    "lvl3_initial": 3081.158887792324,
+    "lvl3_final": 973.0142941215258,
+    "lvl2_initial": 3201.7882167286202,
+    "lvl2_final": 983.7027436275629,
+    "lvl4_improvement": 1553.0115551444455,
+    "lvl3_improvement": 2108.1445936707983,
+    "lvl2_improvement": 2218.0854731010572
+  },
+  "errors_improved_by_level": {
+    "lvl4": true,
+    "lvl3": true,
+    "lvl2": true
+  },
+  "pose_is_finite": true
+}

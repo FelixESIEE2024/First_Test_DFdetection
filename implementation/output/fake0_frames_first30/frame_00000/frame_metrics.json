@@ -1,0 +1,42 @@
+{
+  "index": 0,
+  "image_name": "frame_00000.png",
+  "image_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake0_frames_first30\\frame_00000.png",
+  "output_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake0_frames_first30\\frame_00000",
+  "depth_valid_ratio": 0.9353810740041208,
+  "pose_matrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "frame_role": "keyframe",
+  "photometric_error": null,
+  "photometric_error_mean": null,
+  "photometric_error_cumulative": null,
+  "valid_pixel_count": null,
+  "histogram_counts": null,
+  "optimization_summary": null,
+  "errors_improved_by_level": null,
+  "pose_is_finite": true
+}

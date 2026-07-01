@@ -1,0 +1,147 @@
+{
+  "run_name": "fake_bike_frames_first150_dynamic_intrinsics",
+  "project_root": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1",
+  "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150",
+  "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics",
+  "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics\\recap_evaluation",
+  "frames_processed": 150,
+  "frames_evaluated": 149,
+  "keyframe_name": "frame_00000.png",
+  "depth_encoder": "vitb",
+  "depth_model_name": "LiheYoung/depth_anything_vitb14",
+  "device": "cpu",
+  "intrinsics": {
+    "mode_summary": {
+      "mode": "per_frame_calib",
+      "calib_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150\\calib",
+      "fallback_intrinsics": {
+        "fx": 1310.400005464747,
+        "fy": 1310.400005464747,
+        "cx": 1820.0,
+        "cy": 1024.0
+      },
+      "source_intrinsics_statistics": {
+        "fx": {
+          "min": 831.1278686523438,
+          "max": 3160.78515625,
+          "mean": 1445.7642631022136
+        },
+        "fy": {
+          "min": 831.1278076171875,
+          "max": 3160.784912109375,
+          "mean": 1445.76416015625
+        },
+        "cx": {
+          "min": 352.0,
+          "max": 352.0,
+          "mean": 352.0
+        },
+        "cy": {
+          "min": 640.0,
+          "max": 640.0,
+          "mean": 640.0
+        }
+      }
+    },
+    "keyframe_intrinsics": {
+      "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake_bike_frames_first150\\calib\\frame_00000.txt",
+      "source_image_size": {
+        "width": 704,
+        "height": 1280
+      },
+      "user_intrinsics": {
+        "fx": 977.5416259765625,
+        "fy": 977.54150390625,
+        "cx": 352.0,
+        "cy": 640.0
+      },
+      "internal_level0_intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 888.6742054332386,
+        "fy": 366.57806396484375,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      "pyramid_intrinsics": [
+        {
+          "level": 0,
+          "width": 640,
+          "height": 480,
+          "fx": 888.6742054332386,
+          "fy": 366.57806396484375,
+          "cx": 320.0,
+          "cy": 240.0
+        },
+        {
+          "level": 1,
+          "width": 320,
+          "height": 240,
+          "fx": 444.3371027166193,
+          "fy": 183.28903198242188,
+          "cx": 160.0,
+          "cy": 120.0
+        },
+        {
+          "level": 2,
+          "width": 160,
+          "height": 120,
+          "fx": 222.16855135830966,
+          "fy": 91.64451599121094,
+          "cx": 80.0,
+          "cy": 60.0
+        },
+        {
+          "level": 3,
+          "width": 80,
+          "height": 60,
+          "fx": 111.08427567915483,
+          "fy": 45.82225799560547,
+          "cx": 40.0,
+          "cy": 30.0
+        },
+        {
+          "level": 4,
+          "width": 40,
+          "height": 30,
+          "fx": 55.542137839577414,
+          "fy": 22.911128997802734,
+          "cx": 20.0,
+          "cy": 15.0
+        }
+      ],
+      "internal_params": {
+        "image_width": 640,
+        "image_height": 480,
+        "max_levels": 5
+      }
+    }
+  },
+  "photometric_metrics": {
+    "cumulative_photometric_error": 23217179323.375,
+    "mean_photometric_error": 155819995.4588926,
+    "histogram_labels": [
+      "> 200",
+      "150 - 200",
+      "100 - 150",
+      "50 - 100",
+      "30 - 50",
+      "10 - 30",
+      "0 - 10"
+    ],
+    "mean_histogram_counts": [
+      13.684563758389261,
+      247.21476510067114,
+      2408.3825503355706,
+      16987.46308724832,
+      11750.818791946309,
+      31600.18120805369,
+      49338.530201342284
+    ]
+  },
+  "output_files": {
+    "mean_histogram": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics\\recap_evaluation\\mean_histogram.png",
+    "photometric_error_curve": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics\\recap_evaluation\\photometric_error_curve.png",
+    "sequence_results_json": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake_bike_frames_first150_dynamic_intrinsics\\recap_evaluation\\sequence_results.json"
+  }
+}

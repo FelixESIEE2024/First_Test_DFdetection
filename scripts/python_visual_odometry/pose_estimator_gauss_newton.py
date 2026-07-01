@@ -7,25 +7,51 @@ import frameData
 import common
 
 class pose_estimator_gauss_newton:
-  def __init__(self, camera, show_debug = True):
-    self.camera = camera
+  def __init__(self, camera, show_debug = True, keyframe_camera = None, frame_camera = None):
     self.lastPoseDiff = SE3.identity() 
     self.show_debug = show_debug
+    if frame_camera is None:
+      frame_camera = camera
+    if keyframe_camera is None:
+      keyframe_camera = camera
+    self.set_cameras(frame_camera, keyframe_camera)
+
+  def set_cameras(self, frame_camera, keyframe_camera = None):
+    if keyframe_camera is None:
+      keyframe_camera = frame_camera
+    self.camera = frame_camera
+    self.frame_camera = frame_camera
+    self.keyframe_camera = keyframe_camera
+
+  def _get_camera_pair(self):
+    frame_camera = getattr(self, "frame_camera", self.camera)
+    keyframe_camera = getattr(self, "keyframe_camera", self.camera)
+    return frame_camera, keyframe_camera
+
+  def _validate_level_shapes(self, lvl):
+    frame_camera, keyframe_camera = self._get_camera_pair()
+    if frame_camera.width[lvl] != keyframe_camera.width[lvl] or frame_camera.height[lvl] != keyframe_camera.height[lvl]:
+      raise ValueError("Frame and keyframe cameras must share the same pyramid resolution at each level.")
+    return frame_camera, keyframe_camera
 
   def computeError(self, frame, keyframe, lvl):
 
-    errorImage = np.zeros((self.camera.height[lvl],self.camera.width[lvl]), dtype = np.float32)
+    frame_camera, keyframe_camera = self._validate_level_shapes(lvl)
 
-    width = self.camera.width[lvl]
-    height = self.camera.height[lvl]
-    fx = self.camera.fx[lvl]
-    fy = self.camera.fy[lvl]
-    cx = self.camera.cx[lvl]
-    cy = self.camera.cy[lvl]
-    fxinv = self.camera.fxinv[lvl]
-    fyinv = self.camera.fyinv[lvl]
-    cxinv = self.camera.cxinv[lvl]
-    cyinv = self.camera.cyinv[lvl]
+    errorImage = np.zeros((keyframe_camera.height[lvl],keyframe_camera.width[lvl]), dtype = np.float32)
+
+    width = keyframe_camera.width[lvl]
+    height = keyframe_camera.height[lvl]
+    frame_width = frame_camera.width[lvl]
+    frame_height = frame_camera.height[lvl]
+    fx = frame_camera.fx[lvl]
+    fy = frame_camera.fy[lvl]
+    cx = frame_camera.cx[lvl]
+    cy = frame_camera.cy[lvl]
+    fxinv = keyframe_camera.fxinv[lvl]
+    fyinv = keyframe_camera.fyinv[lvl]
+    cxinv = keyframe_camera.cxinv[lvl]
+    cyinv = keyframe_camera.cyinv[lvl]
     
     relativePose = frame.pose.dot(keyframe.pose.inv())
     
@@ -53,7 +79,7 @@ class pose_estimator_gauss_newton:
 
 
             #si le point projeté est en dehors de l'image, on ne le prend pas en compte
-            if pixelFrame[0] < 1.0 or pixelFrame[0] >= width-1 or pixelFrame[1] < 1.0 or pixelFrame[1] >= height-1:
+            if pixelFrame[0] < 1.0 or pixelFrame[0] >= frame_width-1 or pixelFrame[1] < 1.0 or pixelFrame[1] >= frame_height-1:
                 continue;
 
             vkf = keyframe.image[lvl][y,x]
@@ -77,17 +103,21 @@ class pose_estimator_gauss_newton:
     
 
   def computeHJPose(self, frame, keyframe, lvl):
+
+    frame_camera, keyframe_camera = self._validate_level_shapes(lvl)
   
-    width = self.camera.width[lvl]
-    height = self.camera.height[lvl]
-    fx = self.camera.fx[lvl]
-    fy = self.camera.fy[lvl]
-    cx = self.camera.cx[lvl]
-    cy = self.camera.cy[lvl]
-    fxinv = self.camera.fxinv[lvl]
-    fyinv = self.camera.fyinv[lvl]
-    cxinv = self.camera.cxinv[lvl]
-    cyinv = self.camera.cyinv[lvl]
+    width = keyframe_camera.width[lvl]
+    height = keyframe_camera.height[lvl]
+    frame_width = frame_camera.width[lvl]
+    frame_height = frame_camera.height[lvl]
+    fx = frame_camera.fx[lvl]
+    fy = frame_camera.fy[lvl]
+    cx = frame_camera.cx[lvl]
+    cy = frame_camera.cy[lvl]
+    fxinv = keyframe_camera.fxinv[lvl]
+    fyinv = keyframe_camera.fyinv[lvl]
+    cxinv = keyframe_camera.cxinv[lvl]
+    cyinv = keyframe_camera.cyinv[lvl]
     
     relativePose = frame.pose.dot(keyframe.pose.inv())
     
@@ -112,7 +142,7 @@ class pose_estimator_gauss_newton:
 
             pixelFrame = np.array([fx*pointFrame[0]/pointFrame[2] + cx, fy*pointFrame[1]/pointFrame[2] + cy]);
 
-            if pixelFrame[0] < 1.0 or pixelFrame[0] >= width-1 or pixelFrame[1] < 1.0 or pixelFrame[1] >= height-1.0:
+            if pixelFrame[0] < 1.0 or pixelFrame[0] >= frame_width-1 or pixelFrame[1] < 1.0 or pixelFrame[1] >= frame_height-1.0:
                 continue
                 
             vkf = keyframe.image[lvl][y,x]
@@ -151,13 +181,27 @@ class pose_estimator_gauss_newton:
     maxIterations = np.array([5, 20, 50, 100, 100]);
 
     initialPose = copy.copy(frame.pose)
-    bestPose = self.lastPoseDiff.dot(frame.pose) 
-    #bestPose = copy.copy(frame.pose)
+    propagatedPose = self.lastPoseDiff.dot(frame.pose)
+    bestPose = copy.copy(initialPose)
     
     for lvl in range(4,1,-1):
-        
+
+        frame.pose = copy.copy(bestPose)
         [last_error, errorImage] = self.computeError(frame, keyframe, lvl)
-                
+
+        # The propagated pose from the previous frame is only a prior.
+        # If it is already worse than the current pose at the coarsest level,
+        # keep the safer initialization to avoid ghosting/drift artefacts.
+        if lvl == 4:
+            frame.pose = copy.copy(propagatedPose)
+            [propagated_error, propagatedErrorImage] = self.computeError(frame, keyframe, lvl)
+            if propagated_error < last_error:
+                bestPose = copy.copy(propagatedPose)
+                last_error = propagated_error
+                errorImage = propagatedErrorImage
+            else:
+                frame.pose = copy.copy(bestPose)
+        
         print("lvl: ", lvl, " initial error: ", last_error)
         
         it = 0
@@ -240,4 +284,7 @@ class pose_estimator_gauss_newton:
                         print("update too small, level converged! it: ", it, " error: ", last_error, " lambda: ", lamb)
                         it = maxIterations[lvl]
                         break
+
+    frame.pose = copy.copy(bestPose)
+    self.lastPoseDiff = bestPose.dot(initialPose.inv())
 

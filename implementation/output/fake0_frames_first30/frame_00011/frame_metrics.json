@@ -1,0 +1,64 @@
+{
+  "index": 11,
+  "image_name": "frame_00011.png",
+  "image_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\dataset\\ai\\fake0_frames_first30\\frame_00011.png",
+  "output_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Répo_1st_test\\Implémentaiton_1\\implementation\\output\\fake0_frames_first30\\frame_00011",
+  "depth_valid_ratio": 0.944572029532967,
+  "pose_matrix": [
+    [
+      0.9999999362568218,
+      -0.0003570432021255104,
+      -2.5503843806550396e-06,
+      -0.015253984091489347
+    ],
+    [
+      0.0003570252813852304,
+      0.9999866145865877,
+      -0.005161703265638018,
+      0.00457084416908444
+    ],
+    [
+      4.3933013052539675e-06,
+      0.005161702026062751,
+      0.9999866783177133,
+      -0.00972857538070529
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "frame_role": "frame",
+  "photometric_error": 583188352.0,
+  "photometric_error_mean": 26.11142921447754,
+  "photometric_error_cumulative": 4098889816.0,
+  "valid_pixel_count": 283621,
+  "histogram_counts": [
+    10,
+    5792,
+    14060,
+    25202,
+    24399,
+    79370,
+    134788
+  ],
+  "optimization_summary": {
+    "lvl4_initial": 2653.013986013986,
+    "lvl4_final": 2453.221675354808,
+    "lvl3_initial": 2439.0914003759394,
+    "lvl3_final": 2218.903388264699,
+    "lvl2_initial": 2438.478885377765,
+    "lvl2_final": 2174.511916000213,
+    "lvl4_improvement": 199.79231065917793,
+    "lvl3_improvement": 220.18801211124037,
+    "lvl2_improvement": 263.9669693775518
+  },
+  "errors_improved_by_level": {
+    "lvl4": true,
+    "lvl3": true,
+    "lvl2": true
+  },
+  "pose_is_finite": true
+}
