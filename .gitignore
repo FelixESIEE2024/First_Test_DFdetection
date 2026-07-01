@@ -7,6 +7,7 @@ dataset/
 
 
 
+
 scripts/python_visual_odometry/depth_anything_cache
 scripts/python_visual_odometry/video_eval_reports
 scripts/python_visual_odometry/scaling_outputs
@@ -14,3 +15,6 @@ scripts/python_visual_odometry/scaling_outputs
 # Python cache
 __pycache__/
 *.py[cod]
+
+
+dataset/ai/Geco
