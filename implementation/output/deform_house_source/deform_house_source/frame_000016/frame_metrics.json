@@ -1,0 +1,210 @@
+{
+  "index": 16,
+  "image_name": "frame_000016.jpg",
+  "image_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b_frame\\presentation\\deform_house_source\\frame_000016.jpg",
+  "output_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deform_house_source\\deform_house_source\\frame_000016",
+  "depth_valid_ratio": 0.9083333333333333,
+  "pose_matrix": [
+    [
+      0.9903968222712859,
+      -0.13799260108414765,
+      0.008495674250540649,
+      -5.536941833253434
+    ],
+    [
+      0.13784470741033017,
+      0.9903237397112677,
+      0.016053884366326442,
+      -0.7121524701114561
+    ],
+    [
+      -0.010628785156377607,
+      -0.01472863233020083,
+      0.9998350345510912,
+      12.01908517401173
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "frame_role": "frame",
+  "frame_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b_frame\\presentation\\deform_house_source\\calib\\frame_000016.txt",
+    "source_image_size": {
+      "width": 720,
+      "height": 480
+    },
+    "user_intrinsics": {
+      "fx": 668.9485473632812,
+      "fy": 668.9486083984375,
+      "cx": 360.0,
+      "cy": 240.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 594.6209309895833,
+      "fy": 668.9486083984375,
+      "cx": 320.0,
+      "cy": 240.0
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 594.6209309895833,
+        "fy": 668.9486083984375,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 297.31046549479163,
+        "fy": 334.47430419921875,
+        "cx": 160.0,
+        "cy": 120.0
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 148.65523274739581,
+        "fy": 167.23715209960938,
+        "cx": 80.0,
+        "cy": 60.0
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 74.32761637369791,
+        "fy": 83.61857604980469,
+        "cx": 40.0,
+        "cy": 30.0
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 37.163808186848954,
+        "fy": 41.809288024902344,
+        "cx": 20.0,
+        "cy": 15.0
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "keyframe_intrinsics": {
+    "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b_frame\\presentation\\deform_house_source\\calib\\frame_000000.txt",
+    "source_image_size": {
+      "width": 720,
+      "height": 480
+    },
+    "user_intrinsics": {
+      "fx": 552.5435791015625,
+      "fy": 552.5435791015625,
+      "cx": 360.0,
+      "cy": 240.0
+    },
+    "internal_level0_intrinsics": {
+      "width": 640,
+      "height": 480,
+      "fx": 491.14984809027777,
+      "fy": 552.5435791015625,
+      "cx": 320.0,
+      "cy": 240.0
+    },
+    "pyramid_intrinsics": [
+      {
+        "level": 0,
+        "width": 640,
+        "height": 480,
+        "fx": 491.14984809027777,
+        "fy": 552.5435791015625,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      {
+        "level": 1,
+        "width": 320,
+        "height": 240,
+        "fx": 245.57492404513889,
+        "fy": 276.27178955078125,
+        "cx": 160.0,
+        "cy": 120.0
+      },
+      {
+        "level": 2,
+        "width": 160,
+        "height": 120,
+        "fx": 122.78746202256944,
+        "fy": 138.13589477539062,
+        "cx": 80.0,
+        "cy": 60.0
+      },
+      {
+        "level": 3,
+        "width": 80,
+        "height": 60,
+        "fx": 61.39373101128472,
+        "fy": 69.06794738769531,
+        "cx": 40.0,
+        "cy": 30.0
+      },
+      {
+        "level": 4,
+        "width": 40,
+        "height": 30,
+        "fx": 30.69686550564236,
+        "fy": 34.533973693847656,
+        "cx": 20.0,
+        "cy": 15.0
+      }
+    ],
+    "internal_params": {
+      "image_width": 640,
+      "image_height": 480,
+      "max_levels": 5
+    }
+  },
+  "photometric_error": 582281280.0,
+  "photometric_error_mean": 31.66726303100586,
+  "photometric_error_cumulative": null,
+  "valid_pixel_count": 263369,
+  "histogram_counts": [
+    94,
+    1975,
+    14810,
+    42064,
+    34298,
+    81076,
+    89052
+  ],
+  "optimization_summary": {
+    "lvl4_initial": 2461.9769862759504,
+    "lvl4_final": 1406.084432942833,
+    "lvl3_initial": 2670.9226285600294,
+    "lvl3_final": 1620.5803352144626,
+    "lvl2_initial": 2660.539220306147,
+    "lvl2_final": 1745.0252279436572,
+    "lvl4_improvement": 1055.8925533331173,
+    "lvl3_improvement": 1050.3422933455668,
+    "lvl2_improvement": 915.5139923624897
+  },
+  "errors_improved_by_level": {
+    "lvl4": true,
+    "lvl3": true,
+    "lvl2": true
+  },
+  "pose_is_finite": true
+}

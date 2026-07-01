@@ -63,6 +63,14 @@ HISTOGRAM_LABELS = [
     "10 - 30",
     "0 - 10",
 ]
+HEATMAP_PERCENTILE_LOW = 2.0
+HEATMAP_PERCENTILE_HIGH = 98.0
+HEATMAP_MIN_VMAX = 0.05
+HEATMAP_CMAP_NAME = "magma"
+HEATMAP_PANEL_BACKGROUND = (18, 18, 18)
+HEATMAP_PANEL_BORDER = (52, 52, 52)
+HEATMAP_PANEL_TEXT = (235, 235, 235)
+HEATMAP_INVALID_BGR = (28, 28, 28)
 
 
 def parse_args() -> argparse.Namespace:
@@ -592,49 +600,182 @@ def save_histogram_plot(output_path: Path, image_name: str, range_counts: list[i
     plt.close(fig)
 
 
-def save_squared_error_map_plot(output_path: Path, squared_error_map: np.ndarray, valid_mask: np.ndarray) -> None:
-    valid_values = squared_error_map[valid_mask]
-    vmax_sq = float(np.nanpercentile(valid_values, 99)) if valid_values.size > 0 else 1.0
-    map_to_show = np.nan_to_num(squared_error_map, nan=0.0)
 
-    fig, ax = plt.subplots(figsize=(7, 6))
-    image = ax.imshow(map_to_show, cmap="hot", vmin=0.0, vmax=vmax_sq)
+###########HEATMAP UTILITIES###########
+
+def compute_heatmap_display_range(
+    error_map: np.ndarray,
+    valid_mask: np.ndarray,
+    low_percentile: float = HEATMAP_PERCENTILE_LOW,
+    high_percentile: float = HEATMAP_PERCENTILE_HIGH,
+    min_vmax: float = HEATMAP_MIN_VMAX,
+) -> tuple[float, float]:
+    valid_values = np.asarray(error_map, dtype=np.float32)[valid_mask]
+    valid_values = valid_values[np.isfinite(valid_values)]
+
+    if valid_values.size == 0:
+        return 0.0, max(1.0, min_vmax)
+
+    vmin, vmax = np.percentile(valid_values, [low_percentile, high_percentile])
+    if not np.isfinite(vmin):
+        vmin = 0.0
+    if not np.isfinite(vmax) or vmax <= vmin:
+        vmax = float(np.max(valid_values))
+    if not np.isfinite(vmax) or vmax <= vmin:
+        vmax = vmin + 1e-6
+    vmax = max(float(vmax), float(min_vmax))
+
+    return float(vmin), float(vmax)
+
+
+def normalize_error_map_for_display(
+    error_map: np.ndarray,
+    valid_mask: np.ndarray,
+) -> tuple[np.ndarray, float, float]:
+    if error_map.shape != valid_mask.shape:
+        raise ValueError("La shape de error_map et valid_mask doit etre identique.")
+
+    error_map = np.asarray(error_map, dtype=np.float32)
+    vmin, vmax = compute_heatmap_display_range(error_map, valid_mask)
+
+    filled_map = np.nan_to_num(error_map, nan=vmin, posinf=vmax, neginf=vmin)
+    normalized_map = np.clip((filled_map - vmin) / (vmax - vmin + 1e-8), 0.0, 1.0)
+    normalized_map[~valid_mask] = 0.0
+
+    return normalized_map.astype(np.float32), vmin, vmax
+
+
+def to_bgr_grayscale(image: np.ndarray) -> np.ndarray:
+    gray_image = np.asarray(image)
+    if gray_image.ndim != 2:
+        raise ValueError("L'image de reference doit etre en niveaux de gris.")
+    if gray_image.dtype != np.uint8:
+        gray_image = np.clip(gray_image, 0, 255).astype(np.uint8)
+    return cv2.cvtColor(gray_image, cv2.COLOR_GRAY2BGR)
+
+
+def colorize_error_map(
+    error_map: np.ndarray,
+    valid_mask: np.ndarray,
+    cmap_name: str = HEATMAP_CMAP_NAME,
+) -> np.ndarray:
+    normalized_map, _, _ = normalize_error_map_for_display(error_map, valid_mask)
+    cmap = matplotlib.colormaps.get_cmap(cmap_name)
+    rgb_heatmap = (cmap(normalized_map)[..., :3] * 255.0).astype(np.uint8)
+    bgr_heatmap = cv2.cvtColor(rgb_heatmap, cv2.COLOR_RGB2BGR)
+    bgr_heatmap[~valid_mask] = HEATMAP_INVALID_BGR
+    return bgr_heatmap
+
+
+def build_overlay_panel(
+    reference_gray_image: np.ndarray,
+    heatmap_bgr: np.ndarray,
+    valid_mask: np.ndarray,
+    alpha: float = 0.68,
+) -> np.ndarray:
+    reference_bgr = to_bgr_grayscale(reference_gray_image)
+    overlay = reference_bgr.copy()
+    blended = cv2.addWeighted(reference_bgr, 1.0 - alpha, heatmap_bgr, alpha, 0.0)
+    overlay[valid_mask] = blended[valid_mask]
+    return overlay
+
+
+def compose_heatmap_panels(panels: list[tuple[str, np.ndarray]]) -> np.ndarray:
+    if not panels:
+        raise ValueError("Au moins un panneau doit etre fourni pour composer la heatmap.")
+
+    padding = 16
+    spacing = 14
+    title_band_height = 42
+    panel_height = max(image.shape[0] for _, image in panels)
+    total_width = (2 * padding) + sum(image.shape[1] for _, image in panels) + spacing * (len(panels) - 1)
+    total_height = (2 * padding) + title_band_height + panel_height
+
+    canvas = np.full((total_height, total_width, 3), HEATMAP_PANEL_BACKGROUND, dtype=np.uint8)
+    x_offset = padding
+    y_image = padding + title_band_height
+
+    for title, image in panels:
+        if image.ndim != 3 or image.shape[2] != 3:
+            raise ValueError("Chaque panneau doit etre une image couleur BGR.")
+
+        panel_height_current, panel_width = image.shape[:2]
+        y_offset = y_image + (panel_height - panel_height_current) // 2
+        canvas[y_offset : y_offset + panel_height_current, x_offset : x_offset + panel_width] = image
+        cv2.rectangle(
+            canvas,
+            (x_offset - 1, y_offset - 1),
+            (x_offset + panel_width, y_offset + panel_height_current),
+            HEATMAP_PANEL_BORDER,
+            1,
+        )
+        cv2.putText(
+            canvas,
+            title,
+            (x_offset, padding + 28),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.72,
+            HEATMAP_PANEL_TEXT,
+            2,
+            cv2.LINE_AA,
+        )
+        x_offset += panel_width + spacing
+
+    return canvas
+
+
+def save_squared_error_map_plot(output_path: Path, squared_error_map: np.ndarray, valid_mask: np.ndarray) -> None:
+    _, vmin_sq, vmax_sq = normalize_error_map_for_display(squared_error_map, valid_mask)
+    plot_map = np.ma.masked_where(~valid_mask, np.asarray(squared_error_map, dtype=np.float32))
+    cmap = copy.copy(matplotlib.colormaps.get_cmap(HEATMAP_CMAP_NAME))
+    cmap.set_bad(tuple(channel / 255.0 for channel in HEATMAP_INVALID_BGR[::-1]))
+
+    fig, ax = plt.subplots(figsize=(7.5, 6))
+    image = ax.imshow(plot_map, cmap=cmap, vmin=vmin_sq, vmax=vmax_sq)
     ax.set_title("Squared photometric error map")
     ax.axis("off")
-    fig.colorbar(image, ax=ax)
+    colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+    colorbar.set_label("Squared error")
     fig.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
 def build_dynamic_error_heatmap_frame(
+    reference_gray_image: np.ndarray,
     squared_error_map: np.ndarray,
     valid_mask: np.ndarray,
 ) -> np.ndarray:
     if squared_error_map.shape != valid_mask.shape:
         raise ValueError("La shape de squared_error_map et valid_mask doit etre identique.")
+    if reference_gray_image.shape != squared_error_map.shape:
+        # The photometric error map is computed at the solver working resolution.
+        reference_gray_image = cv2.resize(
+            reference_gray_image,
+            (squared_error_map.shape[1], squared_error_map.shape[0]),
+            interpolation=cv2.INTER_AREA,
+        )
 
-    valid_values = squared_error_map[valid_mask]
-    if valid_values.size == 0:
-        return np.zeros((squared_error_map.shape[0], squared_error_map.shape[1], 3), dtype=np.uint8)
+    reference_bgr = to_bgr_grayscale(reference_gray_image)
+    heatmap_bgr = colorize_error_map(squared_error_map, valid_mask, cmap_name=HEATMAP_CMAP_NAME)
+    overlay_bgr = build_overlay_panel(reference_gray_image, heatmap_bgr, valid_mask)
 
-    vmax_sq = float(np.nanpercentile(valid_values, 99))
-    if not np.isfinite(vmax_sq) or vmax_sq <= 0.0:
-        vmax_sq = float(np.nanmax(valid_values)) if valid_values.size > 0 else 1.0
-    if not np.isfinite(vmax_sq) or vmax_sq <= 0.0:
-        vmax_sq = 1.0
-
-    normalized_map = np.nan_to_num(squared_error_map, nan=0.0)
-    normalized_map = np.clip(normalized_map / vmax_sq, 0.0, 1.0)
-    normalized_uint8 = (normalized_map * 255.0).astype(np.uint8)
-
-    heatmap = cv2.applyColorMap(normalized_uint8, cv2.COLORMAP_TURBO)
-    heatmap[~valid_mask] = 0
-    return heatmap
+    return compose_heatmap_panels(
+        [
+            ("Reference keyframe", reference_bgr),
+            ("Photometric heatmap", heatmap_bgr),
+            ("Overlay", overlay_bgr),
+        ]
+    )
 
 
-def save_dynamic_error_heatmap(output_path: Path, squared_error_map: np.ndarray, valid_mask: np.ndarray) -> np.ndarray:
-    heatmap = build_dynamic_error_heatmap_frame(squared_error_map, valid_mask)
+def save_dynamic_error_heatmap(
+    output_path: Path,
+    reference_gray_image: np.ndarray,
+    squared_error_map: np.ndarray,
+    valid_mask: np.ndarray,
+) -> np.ndarray:
+    heatmap = build_dynamic_error_heatmap_frame(reference_gray_image, squared_error_map, valid_mask)
     write_image_file(output_path, heatmap)
     return heatmap
 
@@ -815,6 +956,7 @@ def run_sequence(
             pose_matrix = current_frame.pose.as_matrix()
             keyframe_heatmap = save_dynamic_error_heatmap(
                 frame_output_dir / "photometric_error_heatmap.png",
+                sequence_keyframe.image[0],
                 np.zeros((keyframe_cam.height[0], keyframe_cam.width[0]), dtype=np.float32),
                 np.zeros((keyframe_cam.height[0], keyframe_cam.width[0]), dtype=bool),
             )
@@ -916,6 +1058,7 @@ def run_sequence(
         )
         heatmap_frame = save_dynamic_error_heatmap(
             frame_output_dir / "photometric_error_heatmap.png",
+            sequence_keyframe.image[0],
             evaluation["squared_error_map"],
             valid_mask,
         )
