@@ -1,1 +1,1 @@
-run_depth_pose_sequence.py --input-dir C:\Users\conqu\Videos\Detection_Deep_Fake\Répo_1st_test\Implementaiton_1\dataset\ai\Geco\deform\a1_0_deform --overwrite
+run_depth_pose_sequence.py --input-dir C:\Users\conqu\Videos\Detection_Deep_Fake\Répo_1st_test\Implementaiton_1\dataset\ai\Geco\deform\a1_0_deform --overwrite --win_sec 5 --max_windows 1 --sans_slice

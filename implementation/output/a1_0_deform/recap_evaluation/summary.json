@@ -1,18 +1,26 @@
 {
   "run_name": "a1_0_deform",
-  "tracking_mode": "frame_to_frame_sliding_keyframe",
+  "tracking_mode": "window_pairwise_stride",
   "project_root": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1",
   "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\deform\\a1_0_deform",
   "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_0_deform",
   "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_0_deform\\recap_evaluation",
   "frames_processed": 26,
-  "frames_evaluated": 25,
+  "sources_evaluated": 26,
+  "sources_with_valid_score": 25,
+  "pairs_evaluated": 25,
+  "windows_evaluated": 1,
   "per_frame_outputs_saved": false,
-  "initial_keyframe_name": "frame_00010.png",
-  "final_keyframe_name": "frame_00035.png",
   "depth_encoder": "vitb",
   "depth_model_name": "LiheYoung/depth_anything_vitb14",
   "device": "cpu",
+  "windowing": {
+    "requested_win_sec": 5.0,
+    "effective_window_length_frames": 26,
+    "max_windows": 1,
+    "pair_stride": 1,
+    "sans_slice": true
+  },
   "intrinsics": {
     "mode_summary": {
       "mode": "per_frame_calib",
@@ -46,7 +54,7 @@
         }
       }
     },
-    "keyframe_intrinsics": {
+    "first_frame_intrinsics": {
       "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\deform\\a1_0_deform\\calib\\frame_00010.txt",
       "source_image_size": {
         "width": 720,
@@ -119,7 +127,7 @@
         "max_levels": 5
       }
     },
-    "final_keyframe_intrinsics": {
+    "last_frame_intrinsics": {
       "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\deform\\a1_0_deform\\calib\\frame_00035.txt",
       "source_image_size": {
         "width": 720,
@@ -194,11 +202,11 @@
     }
   },
   "photometric_metrics": {
-    "cumulative_photometric_error": 1795.1378486623282,
-    "mean_photometric_error": 71.80551394649314,
+    "cumulative_photometric_error": 1795.4391989074127,
+    "mean_photometric_error": 71.8175679562965,
     "metric_definition": "mean squared photometric error per visible pixel",
-    "cumulative_photometric_error_sum": 515048553.75,
-    "mean_photometric_error_sum": 20601942.15,
+    "cumulative_photometric_error_sum": 515210274.375,
+    "mean_photometric_error_sum": 20608410.975,
     "histogram_labels": [
       "> 200",
       "150 - 200",
@@ -210,12 +218,12 @@
     ],
     "mean_histogram_counts": [
       0.0,
-      0.04,
-      319.28,
-      1651.56,
-      2066.48,
-      12086.16,
-      276460.48
+      0.08,
+      319.72,
+      1650.72,
+      2069.76,
+      12089.8,
+      276491.96
     ]
   },
   "output_files": {

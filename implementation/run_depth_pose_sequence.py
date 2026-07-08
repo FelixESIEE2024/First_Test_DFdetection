@@ -7,9 +7,11 @@ import argparse
 import copy
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -123,6 +125,21 @@ def parse_args() -> argparse.Namespace:
             "The shorthand --10 / --20 / ... is also accepted."
         ),
     )
+    parser.add_argument("--win_sec", type=float, default=3.0, help="Window duration (sec).")
+    parser.add_argument("--max_windows", type=int, default=4, help="Max windows per clip.")
+    parser.add_argument(
+        "--pair-stride",
+        "--pair_stride",
+        dest="pair_stride",
+        type=int,
+        default=1,
+        help="Stride used to sample target frames inside each window.",
+    )
+    parser.add_argument(
+        "--sans_slice",
+        action="store_true",
+        help="Inside each window, only compare each source frame with the next frame.",
+    )
 
     args, unknown_args = parser.parse_known_args()
 
@@ -151,6 +168,12 @@ def parse_args() -> argparse.Namespace:
 
     if args.max_frames is not None and args.max_frames <= 0:
         parser.error("--max-frames doit etre strictement positif.")
+    if args.win_sec <= 0.0:
+        parser.error("--win_sec doit etre strictement positif.")
+    if args.max_windows <= 0:
+        parser.error("--max_windows doit etre strictement positif.")
+    if args.pair_stride <= 0:
+        parser.error("--pair-stride doit etre strictement positif.")
 
     return args
 
@@ -374,7 +397,14 @@ def write_launch_command(output_path: Path) -> None:
     output_path.write_text(f"{launch_command}\n", encoding="utf-8")
 
 
-def print_progress(step_index: int, total_steps: int, keyframe_name: str, frame_name: str) -> None:
+def print_progress(
+    step_index: int,
+    total_steps: int,
+    window_index: int,
+    total_windows: int,
+    source_name: str,
+    target_name: str,
+) -> None:
     if total_steps <= 0:
         return
 
@@ -383,9 +413,111 @@ def print_progress(step_index: int, total_steps: int, keyframe_name: str, frame_
     filled = max(0, min(bar_width, filled))
     bar = "#" * filled + "-" * (bar_width - filled)
     sys.stdout.write(
-        f"\r[{bar}] {step_index}/{total_steps} | keyframe={keyframe_name} -> frame={frame_name}"
+        f"\r[{bar}] {step_index}/{total_steps} | "
+        f"window {window_index + 1}/{total_windows} | src={source_name} -> tgt={target_name}"
     )
     sys.stdout.flush()
+
+
+def build_fixed_len_cover_windows(
+    frame_paths: list[Path],
+    win_sec: float,
+    max_windows: int,
+) -> tuple[list[dict[str, Any]], int]:
+    frame_count = len(frame_paths)
+    if frame_count < 2:
+        return [], 0
+
+    requested_window_length = max(2, int(round(win_sec)))
+    if requested_window_length >= frame_count:
+        return [
+            {
+                "window_index": 0,
+                "start_index": 0,
+                "end_index": frame_count - 1,
+                "frame_indices": list(range(frame_count)),
+            }
+        ], frame_count
+
+    required_window_count = int(math.ceil(frame_count / requested_window_length))
+    if max_windows > 0 and required_window_count > max_windows:
+        effective_window_length = max(2, int(math.ceil(frame_count / max_windows)))
+        window_count = max_windows
+    else:
+        effective_window_length = requested_window_length
+        window_count = required_window_count
+
+    if window_count <= 1:
+        starts = [0]
+    else:
+        last_start = max(0, frame_count - effective_window_length)
+        starts: list[int] = []
+        for offset in range(window_count):
+            ideal_start = int(round(last_start * offset / (window_count - 1)))
+            min_start = starts[-1] + 1 if starts else 0
+            max_start = last_start - (window_count - 1 - offset)
+            if max_start < min_start:
+                max_start = min_start
+            starts.append(min(max(ideal_start, min_start), max_start))
+
+    windows: list[dict[str, Any]] = []
+    for window_index, start_index in enumerate(starts):
+        frame_indices = list(range(start_index, min(frame_count, start_index + effective_window_length)))
+        if len(frame_indices) < 2:
+            continue
+        windows.append(
+            {
+                "window_index": window_index,
+                "start_index": frame_indices[0],
+                "end_index": frame_indices[-1],
+                "frame_indices": frame_indices,
+            }
+        )
+
+    if not windows:
+        windows = [
+            {
+                "window_index": 0,
+                "start_index": 0,
+                "end_index": frame_count - 1,
+                "frame_indices": list(range(frame_count)),
+            }
+        ]
+        effective_window_length = frame_count
+
+    return windows, effective_window_length
+
+
+def build_source_target_map(
+    window_indices: list[int],
+    pair_stride: int,
+    sans_slice: bool = False,
+) -> dict[int, list[int]]:
+    if sans_slice:
+        source_target_map: dict[int, list[int]] = {}
+        for source_position, source_index in enumerate(window_indices):
+            if source_position + 1 < len(window_indices):
+                source_target_map[source_index] = [window_indices[source_position + 1]]
+            else:
+                source_target_map[source_index] = []
+        return source_target_map
+
+    target_positions = list(range(0, len(window_indices), pair_stride))
+    source_target_map: dict[int, list[int]] = {}
+
+    for source_position, source_index in enumerate(window_indices):
+        target_indices = [
+            window_indices[target_position]
+            for target_position in target_positions
+            if target_position != source_position
+        ]
+        if not target_indices:
+            fallback_targets = [index for index in window_indices if index != source_index]
+            if fallback_targets:
+                target_indices = [fallback_targets[0]]
+        source_target_map[source_index] = target_indices
+
+    return source_target_map
 
 
 def collect_frame_paths(input_dir: Path, max_frames: int | None = None) -> list[Path]:
@@ -1015,51 +1147,24 @@ def create_frame_record_base(
     }
 
 
-def run_sequence(
+def prepare_frame_entries(
     frame_paths: list[Path],
-    run_dir: Path,
-    recap_dir: Path,
     depth_cache_dir: Path,
     intrinsics_by_frame: dict[str, dict[str, Any]],
-    intrinsics_mode_summary: dict[str, Any],
-    run_name: str,
-) -> None:
-    first_image_path = frame_paths[0]
-    first_image = load_gray_image(first_image_path)
+) -> list[dict[str, Any]]:
+    first_image = load_gray_image(frame_paths[0])
     sequence_height, sequence_width = first_image.shape[:2]
-    keyframe_intrinsics = intrinsics_by_frame[first_image_path.name]["source_intrinsics"]
-    keyframe_calib_path = intrinsics_by_frame[first_image_path.name]["calib_path"]
-    keyframe_cam = build_camera_from_intrinsics(
-        keyframe_intrinsics,
-        source_width=sequence_width,
-        source_height=sequence_height,
-    )
-    sequence_pose_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(
-        keyframe_cam,
-        show_debug=False,
-        keyframe_camera=keyframe_cam,
-        frame_camera=keyframe_cam,
-        verbose=False,
-    )
+    prepared_frames: list[dict[str, Any]] = []
 
-    keyframe_intrinsics_summary = build_camera_intrinsics_summary(
-        keyframe_intrinsics,
-        keyframe_cam,
-        source_width=sequence_width,
-        source_height=sequence_height,
-        calib_path=keyframe_calib_path,
-    )
-    initial_keyframe_intrinsics_summary = copy.deepcopy(keyframe_intrinsics_summary)
+    for frame_index, image_path in enumerate(frame_paths):
+        image = first_image if frame_index == 0 else load_gray_image(image_path)
+        if image.shape[:2] != (sequence_height, sequence_width):
+            raise ValueError(
+                "Toutes les images doivent avoir la meme taille. "
+                f"Attendu: {(sequence_height, sequence_width)}, obtenu: {image.shape[:2]} "
+                f"pour {image_path.name}."
+            )
 
-    sequence_keyframe: frameData.frameData | None = None
-    sequence_results: list[dict[str, Any]] = []
-    heatmap_video_frames: list[np.ndarray] = []
-    pending_visualization: dict[str, Any] | None = None
-    sequence_keyframe_name = first_image_path.name
-    total_pairs = max(0, len(frame_paths) - 1)
-
-    for step, image_path in enumerate(frame_paths):
-        image = load_gray_image(image_path)
         frame_intrinsics_record = intrinsics_by_frame[image_path.name]
         frame_intrinsics = frame_intrinsics_record["source_intrinsics"]
         frame_calib_path = frame_intrinsics_record["calib_path"]
@@ -1076,13 +1181,6 @@ def run_sequence(
             calib_path=frame_calib_path,
         )
 
-        if image.shape[:2] != (sequence_height, sequence_width):
-            raise ValueError(
-                "Toutes les images doivent avoir la meme taille. "
-                f"Attendu: {(sequence_height, sequence_width)}, obtenu: {image.shape[:2]} "
-                f"pour {image_path.name}."
-            )
-
         depth_map = load_depth_map(image_path, depth_cache_dir=depth_cache_dir)
         inv_depth, inv_depth_var, depth_valid_mask = depth_to_invdepth(depth_map)
 
@@ -1090,181 +1188,317 @@ def run_sequence(
         current_frame.setImage(image)
         current_frame.setInvDepth(inv_depth, inv_depth_var)
 
-        if step == 0:
-            sequence_keyframe = copy.deepcopy(current_frame)
-            pose_matrix = current_frame.pose.as_matrix()
-
-            frame_record = create_frame_record_base(
-                index=step,
-                image_path=image_path,
-                frame_output_dir=None,
-                depth_valid_ratio=float(depth_valid_mask.mean()),
-                pose_matrix=pose_matrix,
-            )
-            frame_record.update(
-                {
-                    "frame_role": "keyframe",
-                    "tracking_mode": "frame_to_frame_sliding_keyframe",
-                    "reference_frame_name": None,
-                    "frame_intrinsics": current_intrinsics_summary,
-                    "keyframe_intrinsics": current_intrinsics_summary,
-                    "photometric_error": None,
-                    "photometric_error_sum": None,
-                    "photometric_error_mean": None,
-                    "photometric_error_mean_abs": None,
-                    "photometric_error_cumulative": None,
-                    "valid_pixel_count": None,
-                    "histogram_counts": None,
-                    "optimization_summary": None,
-                    "errors_improved_by_level": None,
-                    "pose_is_finite": True,
-                }
-            )
-
-            sequence_results.append(frame_record)
-            pending_visualization = {
-                "frame_data": copy.deepcopy(current_frame),
-                "camera": current_cam,
-                "display_image": current_frame.image[0].copy(),
-                "image_name": image_path.name,
-                "intrinsics_summary": copy.deepcopy(current_intrinsics_summary),
-            }
-
-            continue
-
-        if sequence_keyframe is None:
-            raise RuntimeError("Keyframe non initialisee.")
-        if pending_visualization is None:
-            raise RuntimeError("La frame source pour la visualisation consecutive est manquante.")
-
-        current_frame.pose = copy.copy(sequence_keyframe.pose)
-        pair_index = step - 1
-        print_progress(
-            step_index=pair_index + 1,
-            total_steps=total_pairs,
-            keyframe_name=sequence_keyframe_name,
-            frame_name=image_path.name,
-        )
-
-        sequence_pose_solver.set_cameras(current_cam, keyframe_cam)
-        initial_error_lvl4, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=4)
-        initial_error_lvl3, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=3)
-        initial_error_lvl2, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=2)
-
-        sequence_pose_solver.optPose(current_frame, sequence_keyframe)
-
-        final_error_lvl4, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=4)
-        final_error_lvl3, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=3)
-        final_error_lvl2, _ = sequence_pose_solver.computeError(current_frame, sequence_keyframe, lvl=2)
-
-        evaluation = compute_photometric_error(
-            current_frame,
-            sequence_keyframe,
-            frame_cam=current_cam,
-            keyframe_cam=keyframe_cam,
-            lvl=0,
-        )
-        abs_error_map = np.sqrt(evaluation["squared_error_map"])
-        valid_mask = evaluation["valid_mask"]
-        valid_abs_errors = abs_error_map[valid_mask]
-
-        photometric_error = evaluation["photometric_error"]
-        photometric_error_sum = float(evaluation["photometric_error_sum"])
-        photometric_error_mean = float(valid_abs_errors.mean()) if valid_abs_errors.size > 0 else None
-        valid_pixel_count = int(evaluation["visible_pixel_count"])
-        projected_candidate_count = int(evaluation["projected_candidate_count"])
-        occluded_pixel_count = int(evaluation["occluded_pixel_count"])
-        histogram_counts = compute_histogram_counts(valid_abs_errors)
-        relative_pose_stats = summarize_relative_pose(current_frame.pose, sequence_keyframe.pose)
-
-        optimization_summary = {
-            "lvl4_initial": float(initial_error_lvl4),
-            "lvl4_final": float(final_error_lvl4),
-            "lvl3_initial": float(initial_error_lvl3),
-            "lvl3_final": float(final_error_lvl3),
-            "lvl2_initial": float(initial_error_lvl2),
-            "lvl2_final": float(final_error_lvl2),
-            "lvl4_improvement": float(initial_error_lvl4 - final_error_lvl4),
-            "lvl3_improvement": float(initial_error_lvl3 - final_error_lvl3),
-            "lvl2_improvement": float(initial_error_lvl2 - final_error_lvl2),
-        }
-
-        errors_improved_by_level = {
-            "lvl4": bool(optimization_summary["lvl4_improvement"] > 0.0),
-            "lvl3": bool(optimization_summary["lvl3_improvement"] > 0.0),
-            "lvl2": bool(optimization_summary["lvl2_improvement"] > 0.0),
-        }
-
-        pose_matrix = current_frame.pose.as_matrix()
-        pose_is_finite = bool(np.isfinite(pose_matrix).all())
-        if not pose_is_finite:
-            raise ValueError(f"Pose matrix contains non-finite values for {image_path.name}.")
-
-        frame_record = create_frame_record_base(
-            index=step,
-            image_path=image_path,
-            frame_output_dir=None,
-            depth_valid_ratio=float(depth_valid_mask.mean()),
-            pose_matrix=pose_matrix,
-        )
-        frame_record.update(
+        prepared_frames.append(
             {
-                "frame_role": "frame",
-                "tracking_mode": "frame_to_frame_sliding_keyframe",
-                "reference_frame_name": sequence_keyframe_name,
-                "frame_intrinsics": current_intrinsics_summary,
-                "keyframe_intrinsics": keyframe_intrinsics_summary,
-                "photometric_error": photometric_error,
-                "photometric_error_sum": photometric_error_sum,
-                "photometric_error_mean": photometric_error_mean,
-                "photometric_error_mean_abs": photometric_error_mean,
-                "photometric_error_cumulative": None,
-                "valid_pixel_count": valid_pixel_count,
-                "projected_candidate_count": projected_candidate_count,
-                "occluded_pixel_count": occluded_pixel_count,
-                "histogram_counts": histogram_counts,
-                "optimization_summary": optimization_summary,
-                "errors_improved_by_level": errors_improved_by_level,
-                "relative_pose_to_keyframe": relative_pose_stats,
-                "pose_is_finite": pose_is_finite,
+                "index": frame_index,
+                "image_path": image_path,
+                "frame_data": current_frame,
+                "camera": current_cam,
+                "intrinsics_summary": current_intrinsics_summary,
+                "depth_valid_ratio": float(depth_valid_mask.mean()),
+                "display_image": current_frame.image[0].copy(),
             }
         )
 
-        sequence_results.append(frame_record)
+    return prepared_frames
 
-        heatmap_frame = save_dynamic_error_heatmap(
-            None,
-            pending_visualization["display_image"],
-            evaluation["squared_error_map"],
-            valid_mask,
-        )
-        heatmap_video_frames.append(heatmap_frame)
 
-        sequence_keyframe = copy.deepcopy(current_frame)
-        keyframe_cam = current_cam
-        keyframe_intrinsics_summary = copy.deepcopy(current_intrinsics_summary)
-        sequence_keyframe_name = image_path.name
-        pending_visualization = {
-            "frame_data": copy.deepcopy(current_frame),
-            "camera": current_cam,
-            "display_image": current_frame.image[0].copy(),
-            "image_name": image_path.name,
-            "intrinsics_summary": copy.deepcopy(current_intrinsics_summary),
+def evaluate_frame_pair(
+    source_entry: dict[str, Any],
+    target_entry: dict[str, Any],
+    window_index: int,
+    pair_index: int,
+    total_pairs: int,
+    total_windows: int,
+) -> tuple[dict[str, Any], np.ndarray]:
+    source_frame = source_entry["frame_data"]
+    target_frame = copy.deepcopy(target_entry["frame_data"])
+    source_cam = source_entry["camera"]
+    target_cam = target_entry["camera"]
+
+    target_frame.pose = copy.copy(source_frame.pose)
+
+    print_progress(
+        step_index=pair_index,
+        total_steps=total_pairs,
+        window_index=window_index,
+        total_windows=total_windows,
+        source_name=source_entry["image_path"].name,
+        target_name=target_entry["image_path"].name,
+    )
+
+    pose_solver = pose_estimator_gauss_newton.pose_estimator_gauss_newton(
+        source_cam,
+        show_debug=False,
+        keyframe_camera=source_cam,
+        frame_camera=target_cam,
+        verbose=False,
+    )
+    pose_solver.set_cameras(target_cam, source_cam)
+
+    initial_error_lvl4, _ = pose_solver.computeError(target_frame, source_frame, lvl=4)
+    initial_error_lvl3, _ = pose_solver.computeError(target_frame, source_frame, lvl=3)
+    initial_error_lvl2, _ = pose_solver.computeError(target_frame, source_frame, lvl=2)
+
+    pose_solver.optPose(target_frame, source_frame)
+
+    final_error_lvl4, _ = pose_solver.computeError(target_frame, source_frame, lvl=4)
+    final_error_lvl3, _ = pose_solver.computeError(target_frame, source_frame, lvl=3)
+    final_error_lvl2, _ = pose_solver.computeError(target_frame, source_frame, lvl=2)
+
+    evaluation = compute_photometric_error(
+        target_frame,
+        source_frame,
+        frame_cam=target_cam,
+        keyframe_cam=source_cam,
+        lvl=0,
+    )
+    abs_error_map = np.sqrt(evaluation["squared_error_map"])
+    valid_mask = evaluation["valid_mask"]
+    valid_abs_errors = abs_error_map[valid_mask]
+
+    photometric_error = evaluation["photometric_error"]
+    photometric_error_sum = float(evaluation["photometric_error_sum"])
+    photometric_error_mean_abs = float(valid_abs_errors.mean()) if valid_abs_errors.size > 0 else None
+    valid_pixel_count = int(evaluation["visible_pixel_count"])
+    projected_candidate_count = int(evaluation["projected_candidate_count"])
+    occluded_pixel_count = int(evaluation["occluded_pixel_count"])
+    histogram_counts = compute_histogram_counts(valid_abs_errors) if valid_abs_errors.size > 0 else None
+    relative_pose_stats = summarize_relative_pose(target_frame.pose, source_frame.pose)
+
+    optimization_summary = {
+        "lvl4_initial": float(initial_error_lvl4),
+        "lvl4_final": float(final_error_lvl4),
+        "lvl3_initial": float(initial_error_lvl3),
+        "lvl3_final": float(final_error_lvl3),
+        "lvl2_initial": float(initial_error_lvl2),
+        "lvl2_final": float(final_error_lvl2),
+        "lvl4_improvement": float(initial_error_lvl4 - final_error_lvl4),
+        "lvl3_improvement": float(initial_error_lvl3 - final_error_lvl3),
+        "lvl2_improvement": float(initial_error_lvl2 - final_error_lvl2),
+    }
+
+    pose_matrix = target_frame.pose.as_matrix()
+    if not bool(np.isfinite(pose_matrix).all()):
+        raise ValueError(f"Pose matrix contains non-finite values for {target_entry['image_path'].name}.")
+
+    pair_record = {
+        "window_index": window_index,
+        "source_frame_index": int(source_entry["index"]),
+        "target_frame_index": int(target_entry["index"]),
+        "source_frame_name": source_entry["image_path"].name,
+        "target_frame_name": target_entry["image_path"].name,
+        "source_frame_path": str(source_entry["image_path"]),
+        "target_frame_path": str(target_entry["image_path"]),
+        "source_depth_valid_ratio": float(source_entry["depth_valid_ratio"]),
+        "target_depth_valid_ratio": float(target_entry["depth_valid_ratio"]),
+        "photometric_error": photometric_error,
+        "photometric_error_sum": photometric_error_sum,
+        "photometric_error_mean_abs": photometric_error_mean_abs,
+        "valid_pixel_count": valid_pixel_count,
+        "projected_candidate_count": projected_candidate_count,
+        "occluded_pixel_count": occluded_pixel_count,
+        "histogram_counts": histogram_counts,
+        "optimization_summary": optimization_summary,
+        "relative_pose_to_source": relative_pose_stats,
+        "estimated_target_pose_matrix": pose_matrix.tolist(),
+        "source_intrinsics": copy.deepcopy(source_entry["intrinsics_summary"]),
+        "target_intrinsics": copy.deepcopy(target_entry["intrinsics_summary"]),
+    }
+
+    heatmap_frame = save_dynamic_error_heatmap(
+        None,
+        source_entry["display_image"],
+        evaluation["squared_error_map"],
+        valid_mask,
+    )
+    return pair_record, heatmap_frame
+
+
+def aggregate_pair_results(pair_results: list[dict[str, Any]], key: str) -> float | None:
+    values = [float(item[key]) for item in pair_results if item.get(key) is not None]
+    if not values:
+        return None
+    return float(np.mean(np.asarray(values, dtype=np.float64)))
+
+
+def aggregate_histogram_counts(pair_results: list[dict[str, Any]]) -> list[float] | None:
+    histogram_arrays = [
+        np.asarray(item["histogram_counts"], dtype=np.float64)
+        for item in pair_results
+        if item.get("histogram_counts") is not None
+    ]
+    if not histogram_arrays:
+        return None
+    return np.mean(np.stack(histogram_arrays, axis=0), axis=0).tolist()
+
+
+def build_source_result(
+    source_result_index: int,
+    window_index: int,
+    source_entry: dict[str, Any],
+    source_pair_results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    valid_pair_results = [
+        pair_result for pair_result in source_pair_results if pair_result.get("photometric_error") is not None
+    ]
+    histogram_counts = aggregate_histogram_counts(valid_pair_results)
+
+    frame_record = create_frame_record_base(
+        index=source_result_index,
+        image_path=source_entry["image_path"],
+        frame_output_dir=None,
+        depth_valid_ratio=float(source_entry["depth_valid_ratio"]),
+        pose_matrix=source_entry["frame_data"].pose.as_matrix(),
+    )
+    frame_record.update(
+        {
+            "frame_role": "window_source",
+            "tracking_mode": "window_pairwise_stride",
+            "window_index": window_index,
+            "source_frame_index": int(source_entry["index"]),
+            "reference_frame_name": None,
+            "compared_frame_names": [item["target_frame_name"] for item in source_pair_results],
+            "comparison_count": len(source_pair_results),
+            "valid_comparison_count": len(valid_pair_results),
+            "frame_intrinsics": copy.deepcopy(source_entry["intrinsics_summary"]),
+            "photometric_error": aggregate_pair_results(valid_pair_results, "photometric_error"),
+            "photometric_error_sum": aggregate_pair_results(valid_pair_results, "photometric_error_sum"),
+            "photometric_error_mean": aggregate_pair_results(valid_pair_results, "photometric_error_mean_abs"),
+            "photometric_error_mean_abs": aggregate_pair_results(valid_pair_results, "photometric_error_mean_abs"),
+            "photometric_error_cumulative": None,
+            "valid_pixel_count": aggregate_pair_results(valid_pair_results, "valid_pixel_count"),
+            "projected_candidate_count": aggregate_pair_results(valid_pair_results, "projected_candidate_count"),
+            "occluded_pixel_count": aggregate_pair_results(valid_pair_results, "occluded_pixel_count"),
+            "histogram_counts": histogram_counts,
+            "pair_results": source_pair_results,
+            "pose_is_finite": True,
         }
+    )
+    return frame_record
 
-    if pending_visualization is not None:
-        final_empty_error_map = np.zeros(pending_visualization["display_image"].shape[:2], dtype=np.float32)
-        final_empty_mask = np.zeros(pending_visualization["display_image"].shape[:2], dtype=bool)
-        final_heatmap_frame = save_dynamic_error_heatmap(
-            None,
-            pending_visualization["display_image"],
-            final_empty_error_map,
-            final_empty_mask,
+
+def run_sequence(
+    frame_paths: list[Path],
+    run_dir: Path,
+    recap_dir: Path,
+    depth_cache_dir: Path,
+    intrinsics_by_frame: dict[str, dict[str, Any]],
+    intrinsics_mode_summary: dict[str, Any],
+    run_name: str,
+    win_sec: float,
+    max_windows: int,
+    pair_stride: int,
+    sans_slice: bool,
+) -> None:
+    prepared_frames = prepare_frame_entries(
+        frame_paths=frame_paths,
+        depth_cache_dir=depth_cache_dir,
+        intrinsics_by_frame=intrinsics_by_frame,
+    )
+    windows, effective_window_length = build_fixed_len_cover_windows(
+        frame_paths=frame_paths,
+        win_sec=win_sec,
+        max_windows=max_windows,
+    )
+
+    pair_plans: list[dict[str, Any]] = []
+    for window in windows:
+        source_target_map = build_source_target_map(
+            window["frame_indices"],
+            pair_stride,
+            sans_slice=sans_slice,
         )
-        heatmap_video_frames.append(final_heatmap_frame)
+        pair_count = sum(len(target_indices) for target_indices in source_target_map.values())
+        pair_plans.append(
+            {
+                "window": window,
+                "source_target_map": source_target_map,
+                "pair_count": pair_count,
+            }
+        )
+
+    total_pairs = sum(item["pair_count"] for item in pair_plans)
+    if total_pairs <= 0:
+        raise ValueError("Aucune paire source/cible exploitable n'a ete generee.")
+
+    source_results: list[dict[str, Any]] = []
+    pair_results: list[dict[str, Any]] = []
+    window_results: list[dict[str, Any]] = []
+    heatmap_video_frames: list[np.ndarray] = []
+    source_result_index = 0
+    pair_progress_index = 0
+
+    for plan in pair_plans:
+        window = plan["window"]
+        source_target_map = plan["source_target_map"]
+        window_pair_results: list[dict[str, Any]] = []
+        window_source_results: list[dict[str, Any]] = []
+
+        print(
+            f"Window {window['window_index'] + 1}/{len(windows)} | "
+            f"frames {window['start_index']}..{window['end_index']} | "
+            f"count={len(window['frame_indices'])}"
+        )
+
+        for source_index in window["frame_indices"]:
+            source_entry = prepared_frames[source_index]
+            source_pair_results: list[dict[str, Any]] = []
+
+            for target_index in source_target_map[source_index]:
+                target_entry = prepared_frames[target_index]
+                pair_progress_index += 1
+                pair_record, heatmap_frame = evaluate_frame_pair(
+                    source_entry=source_entry,
+                    target_entry=target_entry,
+                    window_index=window["window_index"],
+                    pair_index=pair_progress_index,
+                    total_pairs=total_pairs,
+                    total_windows=len(windows),
+                )
+                source_pair_results.append(pair_record)
+                window_pair_results.append(pair_record)
+                pair_results.append(pair_record)
+                heatmap_video_frames.append(heatmap_frame)
+
+            source_result = build_source_result(
+                source_result_index=source_result_index,
+                window_index=window["window_index"],
+                source_entry=source_entry,
+                source_pair_results=source_pair_results,
+            )
+            source_result_index += 1
+            source_results.append(source_result)
+            window_source_results.append(source_result)
+
+        valid_window_sources = [
+            source_result for source_result in window_source_results if source_result.get("photometric_error") is not None
+        ]
+        window_histogram_counts = aggregate_histogram_counts(valid_window_sources)
+        window_results.append(
+            {
+                "window_index": window["window_index"],
+                "start_index": window["start_index"],
+                "end_index": window["end_index"],
+                "frame_names": [frame_paths[index].name for index in window["frame_indices"]],
+                "pair_count": len(window_pair_results),
+                "valid_pair_count": sum(
+                    1 for pair_result in window_pair_results if pair_result.get("photometric_error") is not None
+                ),
+                "source_count": len(window_source_results),
+                "valid_source_count": len(valid_window_sources),
+                "photometric_error": aggregate_pair_results(valid_window_sources, "photometric_error"),
+                "photometric_error_sum": aggregate_pair_results(valid_window_sources, "photometric_error_sum"),
+                "photometric_error_mean_abs": aggregate_pair_results(
+                    valid_window_sources, "photometric_error_mean_abs"
+                ),
+                "histogram_counts": window_histogram_counts,
+            }
+        )
+        sys.stdout.write("\n")
 
     valid_histogram_results = [
-        item for item in sequence_results if item.get("histogram_counts") is not None
+        item for item in source_results if item.get("histogram_counts") is not None
     ]
     if not valid_histogram_results:
         raise ValueError("Aucun histogramme valide disponible pour calculer la moyenne finale.")
@@ -1280,13 +1514,13 @@ def run_sequence(
         valid_frame_count=len(valid_histogram_results),
     )
 
-    valid_results = [item for item in sequence_results if item["photometric_error"] is not None]
+    valid_results = [item for item in source_results if item["photometric_error"] is not None]
     if not valid_results:
         raise ValueError(
             "Aucun resultat valide disponible pour calculer les erreurs photometriques globales."
         )
 
-    iteration_indices = [int(item["index"]) for item in valid_results]
+    iteration_indices = list(range(len(valid_results)))
     photometric_errors = [float(item["photometric_error"]) for item in valid_results]
     mean_photometric_error = save_photometric_error_curve(
         recap_dir / "photometric_error_curve.png",
@@ -1295,14 +1529,14 @@ def run_sequence(
         photometric_errors,
     )
     cumulative_photometric_error = float(np.sum(photometric_errors))
-    photometric_error_sums = [float(item["photometric_error_sum"]) for item in valid_results]
+    photometric_error_sums = [float(item["photometric_error_sum"]) for item in valid_results if item["photometric_error_sum"] is not None]
     cumulative_photometric_error_sum = float(np.sum(photometric_error_sums))
     mean_photometric_error_sum = float(np.mean(photometric_error_sums))
     heatmap_video_path = recap_dir / "photometric_error_heatmap_video.mp4"
     save_heatmap_video(heatmap_video_path, heatmap_video_frames, fps=HEATMAP_VIDEO_FPS)
 
     running_total = 0.0
-    for item in sequence_results:
+    for item in source_results:
         current_error = item.get("photometric_error")
         if current_error is None:
             item["photometric_error_cumulative"] = None
@@ -1312,23 +1546,31 @@ def run_sequence(
 
     summary = {
         "run_name": run_name,
-        "tracking_mode": "frame_to_frame_sliding_keyframe",
+        "tracking_mode": "window_pairwise_stride",
         "project_root": str(PROJECT_ROOT),
         "input_dir": str(frame_paths[0].parent),
         "output_run_dir": str(run_dir),
         "recap_dir": str(recap_dir),
         "frames_processed": len(frame_paths),
-        "frames_evaluated": len(valid_results),
+        "sources_evaluated": len(source_results),
+        "sources_with_valid_score": len(valid_results),
+        "pairs_evaluated": len(pair_results),
+        "windows_evaluated": len(window_results),
         "per_frame_outputs_saved": False,
-        "initial_keyframe_name": frame_paths[0].name,
-        "final_keyframe_name": sequence_keyframe_name,
         "depth_encoder": DEPTH_ENCODER,
         "depth_model_name": DEPTH_MODEL_NAME,
         "device": DEVICE,
+        "windowing": {
+            "requested_win_sec": win_sec,
+            "effective_window_length_frames": effective_window_length,
+            "max_windows": max_windows,
+            "pair_stride": pair_stride,
+            "sans_slice": bool(sans_slice),
+        },
         "intrinsics": {
             "mode_summary": intrinsics_mode_summary,
-            "keyframe_intrinsics": initial_keyframe_intrinsics_summary,
-            "final_keyframe_intrinsics": keyframe_intrinsics_summary,
+            "first_frame_intrinsics": copy.deepcopy(prepared_frames[0]["intrinsics_summary"]),
+            "last_frame_intrinsics": copy.deepcopy(prepared_frames[-1]["intrinsics_summary"]),
         },
         "photometric_metrics": {
             "cumulative_photometric_error": cumulative_photometric_error,
@@ -1348,11 +1590,16 @@ def run_sequence(
         },
     }
 
-    write_json(recap_dir / "sequence_results.json", {"results": sequence_results})
+    write_json(
+        recap_dir / "sequence_results.json",
+        {
+            "source_results": source_results,
+            "pair_results": pair_results,
+            "window_results": window_results,
+        },
+    )
     write_json(recap_dir / "summary.json", summary)
 
-    if total_pairs > 0:
-        sys.stdout.write("\n")
     print(f"Output run dir: {run_dir}")
     print(f"Summary file: {recap_dir / 'summary.json'}")
 
@@ -1387,6 +1634,10 @@ def main() -> int:
         intrinsics_by_frame=intrinsics_by_frame,
         intrinsics_mode_summary=intrinsics_mode_summary,
         run_name=run_name,
+        win_sec=args.win_sec,
+        max_windows=args.max_windows,
+        pair_stride=args.pair_stride,
+        sans_slice=args.sans_slice,
     )
     return 0
 
