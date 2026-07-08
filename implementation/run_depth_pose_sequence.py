@@ -936,7 +936,7 @@ def colorize_error_map(
     return bgr_heatmap
 
 
-def build_overlay_panel(
+def build_heatmap_overlay(
     reference_gray_image: np.ndarray,
     heatmap_bgr: np.ndarray,
     valid_mask: np.ndarray,
@@ -949,32 +949,34 @@ def build_overlay_panel(
     return overlay
 
 
-def compose_heatmap_panels(panels: list[tuple[str, np.ndarray]]) -> np.ndarray:
-    if not panels:
-        raise ValueError("Au moins un panneau doit etre fourni pour composer la heatmap.")
+def compose_heatmap_frame(left_panel: np.ndarray, right_panel: np.ndarray) -> np.ndarray:
+    if left_panel.shape != right_panel.shape:
+        raise ValueError("Les panneaux gauche et droit de la heatmap doivent avoir la meme taille.")
+    if left_panel.ndim != 3 or left_panel.shape[2] != 3:
+        raise ValueError("Le panneau gauche doit etre une image couleur BGR.")
+    if right_panel.ndim != 3 or right_panel.shape[2] != 3:
+        raise ValueError("Le panneau droit doit etre une image couleur BGR.")
 
     padding = 16
     spacing = 14
     title_band_height = 42
-    panel_height = max(image.shape[0] for _, image in panels)
-    total_width = (2 * padding) + sum(image.shape[1] for _, image in panels) + spacing * (len(panels) - 1)
+    panel_height, panel_width = left_panel.shape[:2]
+    total_width = (2 * padding) + (2 * panel_width) + spacing
     total_height = (2 * padding) + title_band_height + panel_height
 
     canvas = np.full((total_height, total_width, 3), HEATMAP_PANEL_BACKGROUND, dtype=np.uint8)
-    x_offset = padding
     y_image = padding + title_band_height
 
-    for title, image in panels:
-        if image.ndim != 3 or image.shape[2] != 3:
-            raise ValueError("Chaque panneau doit etre une image couleur BGR.")
-
-        panel_height_current, panel_width = image.shape[:2]
-        y_offset = y_image + (panel_height - panel_height_current) // 2
-        canvas[y_offset : y_offset + panel_height_current, x_offset : x_offset + panel_width] = image
+    panel_specs = [
+        ("Frame 640x480", left_panel, padding),
+        ("Heatmap overlay 640x480", right_panel, padding + panel_width + spacing),
+    ]
+    for title, image, x_offset in panel_specs:
+        canvas[y_image : y_image + panel_height, x_offset : x_offset + panel_width] = image
         cv2.rectangle(
             canvas,
-            (x_offset - 1, y_offset - 1),
-            (x_offset + panel_width, y_offset + panel_height_current),
+            (x_offset - 1, y_image - 1),
+            (x_offset + panel_width, y_image + panel_height),
             HEATMAP_PANEL_BORDER,
             1,
         )
@@ -988,29 +990,11 @@ def compose_heatmap_panels(panels: list[tuple[str, np.ndarray]]) -> np.ndarray:
             2,
             cv2.LINE_AA,
         )
-        x_offset += panel_width + spacing
 
     return canvas
 
 
-def save_squared_error_map_plot(output_path: Path, squared_error_map: np.ndarray, valid_mask: np.ndarray) -> None:
-    _, vmin_sq, vmax_sq = normalize_error_map_for_display(squared_error_map, valid_mask)
-    plot_map = np.ma.masked_where(~valid_mask, np.asarray(squared_error_map, dtype=np.float32))
-    cmap = copy.copy(matplotlib.colormaps.get_cmap(HEATMAP_CMAP_NAME))
-    cmap.set_bad(tuple(channel / 255.0 for channel in HEATMAP_INVALID_BGR[::-1]))
-
-    fig, ax = plt.subplots(figsize=(7.5, 6))
-    image = ax.imshow(plot_map, cmap=cmap, vmin=vmin_sq, vmax=vmax_sq)
-    ax.set_title("Squared photometric error map")
-    ax.axis("off")
-    colorbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
-    colorbar.set_label("Squared error")
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-
-def build_dynamic_error_heatmap_frame(
+def build_heatmap_frame(
     reference_gray_image: np.ndarray,
     squared_error_map: np.ndarray,
     valid_mask: np.ndarray,
@@ -1018,33 +1002,25 @@ def build_dynamic_error_heatmap_frame(
     if squared_error_map.shape != valid_mask.shape:
         raise ValueError("La shape de squared_error_map et valid_mask doit etre identique.")
     if reference_gray_image.shape != squared_error_map.shape:
-        # The photometric error map is computed at the solver working resolution.
-        reference_gray_image = cv2.resize(
-            reference_gray_image,
-            (squared_error_map.shape[1], squared_error_map.shape[0]),
-            interpolation=cv2.INTER_AREA,
+        raise ValueError(
+            "La heatmap doit etre construite directement dans la resolution interne 640x480."
         )
 
     display_valid_mask = build_heatmap_display_mask(squared_error_map, valid_mask)
     reference_bgr = to_bgr_grayscale(reference_gray_image)
     heatmap_bgr = colorize_error_map(squared_error_map, display_valid_mask, cmap_name=HEATMAP_CMAP_NAME)
-    colored_frame_bgr = build_overlay_panel(reference_gray_image, heatmap_bgr, display_valid_mask)
+    overlay_bgr = build_heatmap_overlay(reference_gray_image, heatmap_bgr, display_valid_mask)
 
-    return compose_heatmap_panels(
-        [
-            ("Original frame", reference_bgr),
-            ("Colored frame", colored_frame_bgr),
-        ]
-    )
+    return compose_heatmap_frame(reference_bgr, overlay_bgr)
 
 
-def save_dynamic_error_heatmap(
+def save_heatmap_frame(
     output_path: Path | None,
     reference_gray_image: np.ndarray,
     squared_error_map: np.ndarray,
     valid_mask: np.ndarray,
 ) -> np.ndarray:
-    heatmap = build_dynamic_error_heatmap_frame(reference_gray_image, squared_error_map, valid_mask)
+    heatmap = build_heatmap_frame(reference_gray_image, squared_error_map, valid_mask)
     if output_path is not None:
         write_image_file(output_path, heatmap)
     return heatmap
@@ -1306,7 +1282,7 @@ def evaluate_frame_pair(
         "target_intrinsics": copy.deepcopy(target_entry["intrinsics_summary"]),
     }
 
-    heatmap_frame = save_dynamic_error_heatmap(
+    heatmap_frame = save_heatmap_frame(
         None,
         source_entry["display_image"],
         evaluation["squared_error_map"],

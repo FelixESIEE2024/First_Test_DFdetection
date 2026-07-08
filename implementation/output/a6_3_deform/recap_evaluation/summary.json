@@ -1,14 +1,15 @@
 {
-  "run_name": "a1_2_deforme_20_35_frames",
+  "run_name": "a6_3_deform",
   "tracking_mode": "frame_to_frame_sliding_keyframe",
   "project_root": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1",
-  "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b_frame\\object_centric_prompts\\a1_2_deforme_20_35_frames",
-  "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames",
-  "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames\\recap_evaluation",
-  "frames_processed": 49,
-  "frames_evaluated": 48,
-  "initial_keyframe_name": "frame_00000.png",
-  "final_keyframe_name": "frame_00048.png",
+  "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\deform\\a6_3_deform",
+  "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform",
+  "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform\\recap_evaluation",
+  "frames_processed": 10,
+  "frames_evaluated": 9,
+  "per_frame_outputs_saved": false,
+  "initial_keyframe_name": "frame_00011.png",
+  "final_keyframe_name": "frame_00020.png",
   "depth_encoder": "vitb",
   "depth_model_name": "LiheYoung/depth_anything_vitb14",
   "device": "cpu",
@@ -172,8 +173,8 @@
     }
   },
   "photometric_metrics": {
-    "cumulative_photometric_error": 126069520.125,
-    "mean_photometric_error": 2626448.3359375,
+    "cumulative_photometric_error": 68341087.0,
+    "mean_photometric_error": 7593454.111111111,
     "histogram_labels": [
       "> 200",
       "150 - 200",
@@ -186,17 +187,17 @@
     "mean_histogram_counts": [
       0.0,
       0.0,
-      8.875,
-      69.14583333333333,
-      338.875,
-      3251.8958333333335,
-      289390.5416666667
+      0.0,
+      145.44444444444446,
+      1175.4444444444443,
+      14485.555555555555,
+      288375.77777777775
     ]
   },
   "output_files": {
-    "mean_histogram": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames\\recap_evaluation\\mean_histogram.png",
-    "photometric_error_curve": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames\\recap_evaluation\\photometric_error_curve.png",
-    "photometric_error_heatmap_video": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames\\recap_evaluation\\photometric_error_heatmap_video.mp4",
-    "sequence_results_json": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a1_2_def_20-35\\a1_2_deforme_20_35_frames\\recap_evaluation\\sequence_results.json"
+    "mean_histogram": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform\\recap_evaluation\\mean_histogram.png",
+    "photometric_error_curve": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform\\recap_evaluation\\photometric_error_curve.png",
+    "photometric_error_heatmap_video": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform\\recap_evaluation\\photometric_error_heatmap_video.mp4",
+    "sequence_results_json": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\a6_3_deform\\recap_evaluation\\sequence_results.json"
   }
 }
