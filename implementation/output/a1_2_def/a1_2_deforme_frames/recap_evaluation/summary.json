@@ -1,0 +1,223 @@
+{
+  "run_name": "a1_2_deforme_frames",
+  "tracking_mode": "frame_to_frame_sliding_keyframe",
+  "project_root": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1",
+  "input_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b\\Gen_CogVideoX_2b\\object_centric_prompts\\oue\\a1_2_deforme_frames",
+  "output_run_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames",
+  "recap_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames\\recap_evaluation",
+  "frames_processed": 49,
+  "frames_evaluated": 48,
+  "initial_keyframe_name": "frame_00000.png",
+  "final_keyframe_name": "frame_00048.png",
+  "depth_encoder": "vitb",
+  "depth_model_name": "LiheYoung/depth_anything_vitb14",
+  "device": "cpu",
+  "intrinsics": {
+    "mode_summary": {
+      "mode": "per_frame_calib",
+      "calib_dir": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b\\Gen_CogVideoX_2b\\object_centric_prompts\\oue\\a1_2_deforme_frames\\calib",
+      "fallback_intrinsics": {
+        "fx": 1310.400005464747,
+        "fy": 1310.400005464747,
+        "cx": 1820.0,
+        "cy": 1024.0
+      },
+      "source_intrinsics_statistics": {
+        "fx": {
+          "min": 581.14990234375,
+          "max": 1096.438232421875,
+          "mean": 857.8013093909439
+        },
+        "fy": {
+          "min": 581.14990234375,
+          "max": 1096.4381103515625,
+          "mean": 857.8013056540976
+        },
+        "cx": {
+          "min": 360.0,
+          "max": 360.0,
+          "mean": 360.0
+        },
+        "cy": {
+          "min": 240.0,
+          "max": 240.0,
+          "mean": 240.0
+        }
+      }
+    },
+    "keyframe_intrinsics": {
+      "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b\\Gen_CogVideoX_2b\\object_centric_prompts\\oue\\a1_2_deforme_frames\\calib\\frame_00000.txt",
+      "source_image_size": {
+        "width": 720,
+        "height": 480
+      },
+      "user_intrinsics": {
+        "fx": 925.5477294921875,
+        "fy": 925.5477294921875,
+        "cx": 360.0,
+        "cy": 240.0
+      },
+      "internal_level0_intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 822.7090928819443,
+        "fy": 925.5477294921875,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      "pyramid_intrinsics": [
+        {
+          "level": 0,
+          "width": 640,
+          "height": 480,
+          "fx": 822.7090928819443,
+          "fy": 925.5477294921875,
+          "cx": 320.0,
+          "cy": 240.0
+        },
+        {
+          "level": 1,
+          "width": 320,
+          "height": 240,
+          "fx": 411.3545464409722,
+          "fy": 462.77386474609375,
+          "cx": 160.0,
+          "cy": 120.0
+        },
+        {
+          "level": 2,
+          "width": 160,
+          "height": 120,
+          "fx": 205.6772732204861,
+          "fy": 231.38693237304688,
+          "cx": 80.0,
+          "cy": 60.0
+        },
+        {
+          "level": 3,
+          "width": 80,
+          "height": 60,
+          "fx": 102.83863661024304,
+          "fy": 115.69346618652344,
+          "cx": 40.0,
+          "cy": 30.0
+        },
+        {
+          "level": 4,
+          "width": 40,
+          "height": 30,
+          "fx": 51.41931830512152,
+          "fy": 57.84673309326172,
+          "cx": 20.0,
+          "cy": 15.0
+        }
+      ],
+      "internal_params": {
+        "image_width": 640,
+        "image_height": 480,
+        "max_levels": 5
+      }
+    },
+    "final_keyframe_intrinsics": {
+      "calib_path": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\dataset\\ai\\Geco\\Gen_CogVideoX_2b\\Gen_CogVideoX_2b\\object_centric_prompts\\oue\\a1_2_deforme_frames\\calib\\frame_00048.txt",
+      "source_image_size": {
+        "width": 720,
+        "height": 480
+      },
+      "user_intrinsics": {
+        "fx": 1028.35009765625,
+        "fy": 1028.35009765625,
+        "cx": 360.0,
+        "cy": 240.0
+      },
+      "internal_level0_intrinsics": {
+        "width": 640,
+        "height": 480,
+        "fx": 914.0889756944443,
+        "fy": 1028.35009765625,
+        "cx": 320.0,
+        "cy": 240.0
+      },
+      "pyramid_intrinsics": [
+        {
+          "level": 0,
+          "width": 640,
+          "height": 480,
+          "fx": 914.0889756944443,
+          "fy": 1028.35009765625,
+          "cx": 320.0,
+          "cy": 240.0
+        },
+        {
+          "level": 1,
+          "width": 320,
+          "height": 240,
+          "fx": 457.0444878472222,
+          "fy": 514.175048828125,
+          "cx": 160.0,
+          "cy": 120.0
+        },
+        {
+          "level": 2,
+          "width": 160,
+          "height": 120,
+          "fx": 228.5222439236111,
+          "fy": 257.0875244140625,
+          "cx": 80.0,
+          "cy": 60.0
+        },
+        {
+          "level": 3,
+          "width": 80,
+          "height": 60,
+          "fx": 114.26112196180554,
+          "fy": 128.54376220703125,
+          "cx": 40.0,
+          "cy": 30.0
+        },
+        {
+          "level": 4,
+          "width": 40,
+          "height": 30,
+          "fx": 57.13056098090277,
+          "fy": 64.27188110351562,
+          "cx": 20.0,
+          "cy": 15.0
+        }
+      ],
+      "internal_params": {
+        "image_width": 640,
+        "image_height": 480,
+        "max_levels": 5
+      }
+    }
+  },
+  "photometric_metrics": {
+    "cumulative_photometric_error": 4156698222.75,
+    "mean_photometric_error": 86597879.640625,
+    "histogram_labels": [
+      "> 200",
+      "150 - 200",
+      "100 - 150",
+      "50 - 100",
+      "30 - 50",
+      "10 - 30",
+      "0 - 10"
+    ],
+    "mean_histogram_counts": [
+      0.0,
+      45.708333333333336,
+      2061.3333333333335,
+      7562.416666666667,
+      6515.958333333333,
+      18816.229166666668,
+      227445.875
+    ]
+  },
+  "output_files": {
+    "mean_histogram": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames\\recap_evaluation\\mean_histogram.png",
+    "photometric_error_curve": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames\\recap_evaluation\\photometric_error_curve.png",
+    "photometric_error_heatmap_video": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames\\recap_evaluation\\photometric_error_heatmap_video.mp4",
+    "sequence_results_json": "C:\\Users\\conqu\\Videos\\Detection_Deep_Fake\\Repo_1st_test\\Implementaiton_1\\implementation\\output\\deformation\\a1_2_deforme_frames\\recap_evaluation\\sequence_results.json"
+  }
+}

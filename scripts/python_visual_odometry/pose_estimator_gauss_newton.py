@@ -7,9 +7,10 @@ import frameData
 import common
 
 class pose_estimator_gauss_newton:
-  def __init__(self, camera, show_debug = True, keyframe_camera = None, frame_camera = None):
+  def __init__(self, camera, show_debug = True, keyframe_camera = None, frame_camera = None, verbose = False):
     self.lastPoseDiff = SE3.identity() 
     self.show_debug = show_debug
+    self.verbose = verbose
     if frame_camera is None:
       frame_camera = camera
     if keyframe_camera is None:
@@ -202,7 +203,8 @@ class pose_estimator_gauss_newton:
             else:
                 frame.pose = copy.copy(bestPose)
         
-        print("lvl: ", lvl, " initial error: ", last_error)
+        if self.verbose:
+            print("lvl: ", lvl, " initial error: ", last_error)
         
         it = 0
         while it < maxIterations[lvl]:
@@ -264,7 +266,8 @@ class pose_estimator_gauss_newton:
                     last_error = copy.copy(error)
 
                     if p >  0.999:
-                        print(" error improvement too small, level converged! it: ", it, " error: ", last_error, " lambda: ", lamb)
+                        if self.verbose:
+                            print(" error improvement too small, level converged! it: ", it, " error: ", last_error, " lambda: ", lamb)
                         it = maxIterations[lvl]
                     break
                 else:
@@ -281,7 +284,8 @@ class pose_estimator_gauss_newton:
                         lamb *= 2.0#*n_try
 
                     if inc_pose.dot(inc_pose) < 1e-32:
-                        print("update too small, level converged! it: ", it, " error: ", last_error, " lambda: ", lamb)
+                        if self.verbose:
+                            print("update too small, level converged! it: ", it, " error: ", last_error, " lambda: ", lamb)
                         it = maxIterations[lvl]
                         break
 
